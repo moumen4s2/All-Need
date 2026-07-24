@@ -1,19 +1,39 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from database import engine, Base, get_db
-
+from models import Newsletter as NewsletterModel
 import os
 import logging
-from pathlib import Path
-from pydantic import BaseModel, Field, EmailStr
-from typing import List, Optional
 import uuid
-from datetime import datetime, timezone, timedelta
 import httpx
+from models import ContactMessage as ContactModel
+from pathlib import Path
+from typing import List, Optional
+from datetime import datetime, timezone, timedelta
+
+from pydantic import BaseModel, Field, EmailStr
+
+# SQLAlchemy
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from database import Base, engine, get_db
+from models import Product, Review
+from sqlalchemy import select, func
+# Models
+from sqlalchemy import select, func
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from models import (
+    User,
+    UserSession,
+    Product,
+    Review,
+    Newsletter,
+    ContactMessage,
+    Order,
+    OrderItem
+)
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -86,30 +106,53 @@ class OrderCreate(BaseModel):
 
 
 # ---------------- Auth helpers ----------------
-async def get_current_user(request: Request):
+from sqlalchemy import select
+from models import User, UserSession
+
+async def get_current_user(
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
     token = request.cookies.get("session_token")
+
     if not token:
         auth = request.headers.get("Authorization", "")
         if auth.startswith("Bearer "):
             token = auth[7:]
+
     if not token:
         return None
-    session = await db.user_sessions.find_one({"session_token": token}, {"_id": 0})
+
+    result = await db.execute(
+        select(UserSession).where(
+            UserSession.session_token == token
+        )
+    )
+
+    session = result.scalar_one_or_none()
+
     if not session:
         return None
-    expires_at = session["expires_at"]
-    if isinstance(expires_at, str):
-        expires_at = datetime.fromisoformat(expires_at)
-    if expires_at.tzinfo is None:
-        expires_at = expires_at.replace(tzinfo=timezone.utc)
-    if expires_at < now_utc():
+
+    expires = datetime.fromisoformat(session.expires_at)
+
+    if expires < now_utc():
         return None
-    user = await db.users.find_one({"user_id": session["user_id"]}, {"_id": 0})
-    return user
+
+    result = await db.execute(
+        select(User).where(
+            User.user_id == session.user_id
+        )
+    )
+
+    return result.scalar_one_or_none()
 
 
-@api_router.post("/auth/session")
-async def create_session(request: Request, response: Response):
+async def create_session(
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db)
+):
     body = await request.json()
     session_id = body.get("session_id")
     if not session_id:
@@ -123,27 +166,61 @@ async def create_session(request: Request, response: Response):
         raise HTTPException(status_code=401, detail="Invalid session")
     data = r.json()
     email = data["email"]
-    existing = await db.users.find_one({"email": email}, {"_id": 0})
+
+    result = await db.execute(
+        select(User).where(User.email == email)
+    )
+    existing = result.scalar_one_or_none()
+
     if existing:
-        user_id = existing["user_id"]
-        await db.users.update_one({"user_id": user_id}, {"$set": {"name": data["name"], "picture": data.get("picture", "")}})
+        user_id = existing.user_id
+        existing.name = data["name"]
+        existing.picture = data.get("picture", "")
+
+        await db.commit()
+
     else:
         user_id = f"user_{uuid.uuid4().hex[:12]}"
-        await db.users.insert_one({
-            "user_id": user_id, "email": email, "name": data["name"],
-            "picture": data.get("picture", ""), "created_at": now_utc().isoformat(),
-        })
+
+        user = User(
+            user_id=user_id,
+            email=email,
+            name=data["name"],
+            picture=data.get("picture", ""),
+            created_at=now_utc().isoformat()
+        )
+
+        db.add(user)
+        await db.commit()
+
     session_token = data["session_token"]
     expires_at = now_utc() + timedelta(days=7)
-    await db.user_sessions.insert_one({
-        "user_id": user_id, "session_token": session_token,
-        "expires_at": expires_at.isoformat(), "created_at": now_utc().isoformat(),
-    })
-    response.set_cookie(key="session_token", value=session_token, httponly=True,
-                        secure=True, samesite="none", path="/", max_age=7 * 24 * 60 * 60)
-    user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
-    return user
 
+    session = UserSession(
+        user_id=user_id,
+        session_token=session_token,
+        expires_at=expires_at.isoformat(),
+        created_at=now_utc().isoformat()
+    )
+
+    db.add(session)
+    await db.commit()
+
+    response.set_cookie(
+        key="session_token",
+        value=session_token,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        path="/",
+        max_age=7 * 24 * 60 * 60
+    )
+
+    result = await db.execute(
+        select(User).where(User.user_id == user_id)
+    )
+
+    return result.scalar_one()
 
 @api_router.get("/auth/me")
 async def auth_me(user=Depends(get_current_user)):
@@ -153,13 +230,29 @@ async def auth_me(user=Depends(get_current_user)):
 
 
 @api_router.post("/auth/logout")
-async def logout(request: Request, response: Response):
+async def logout(
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db)
+):
     token = request.cookies.get("session_token")
-    if token:
-        await db.user_sessions.delete_one({"session_token": token})
-    response.delete_cookie("session_token", path="/")
-    return {"ok": True}
 
+    if token:
+        result = await db.execute(
+            select(UserSession).where(
+                UserSession.session_token == token
+            )
+        )
+
+        session = result.scalar_one_or_none()
+
+        if session:
+            await db.delete(session)
+            await db.commit()
+
+    response.delete_cookie("session_token", path="/")
+
+    return {"ok": True}
 
 # ---------------- Catalog ----------------
 CATEGORIES = [
@@ -232,96 +325,215 @@ COUPONS = {
 }
 
 
-@api_router.on_event = None  # noqa
 
 
-async def seed_products():
-    count = await db.products.count_documents({})
+
+async def seed_products(db: AsyncSession):
+
+    result = await db.execute(
+        select(func.count(Product.id))
+    )
+
+    count = result.scalar()
+
     if count == 0:
-        for prod in SEED_PRODUCTS:
-            doc = {**prod, "reviews": []}
-            await db.products.insert_one(doc)
+
+        for item in SEED_PRODUCTS:
+            product = Product(**item)
+            db.add(product)
+
+        await db.commit()
+
         logger.info(f"Seeded {len(SEED_PRODUCTS)} products")
 
 
 @api_router.get("/categories")
-async def get_categories():
+async def get_categories(
+    db: AsyncSession = Depends(get_db)
+):
+
     result = []
+
     for c in CATEGORIES:
-        cnt = await db.products.count_documents({"category": c["slug"]})
-        result.append({**c, "count": cnt})
+
+        res = await db.execute(
+            select(func.count(Product.id))
+            .where(Product.category == c["slug"])
+        )
+
+        count = res.scalar()
+
+        result.append({
+            **c,
+            "count": count
+        })
+
     return result
 
 
 @api_router.get("/products")
-async def get_products(category: Optional[str] = None, search: Optional[str] = None,
-                       sort: Optional[str] = None, best_seller: Optional[bool] = None,
-                       new_arrival: Optional[bool] = None, min_price: Optional[float] = None,
-                       max_price: Optional[float] = None):
-    query = {}
+async def get_products(
+    category: Optional[str] = None,
+    search: Optional[str] = None,
+    sort: Optional[str] = None,
+    best_seller: Optional[bool] = None,
+    new_arrival: Optional[bool] = None,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    db: AsyncSession = Depends(get_db)
+):
+
+    query = select(Product)
+
     if category:
-        query["category"] = category
+        query = query.where(Product.category == category)
+
     if best_seller:
-        query["best_seller"] = True
+        query = query.where(Product.best_seller == True)
+
     if new_arrival:
-        query["new_arrival"] = True
-    if search:
-        query["$or"] = [
-            {"name": {"$regex": search, "$options": "i"}},
-            {"name_ar": {"$regex": search, "$options": "i"}},
-            {"description": {"$regex": search, "$options": "i"}},
-        ]
-    price_q = {}
+        query = query.where(Product.new_arrival == True)
+
     if min_price is not None:
-        price_q["$gte"] = min_price
+        query = query.where(Product.price >= min_price)
+
     if max_price is not None:
-        price_q["$lte"] = max_price
-    if price_q:
-        query["price"] = price_q
-    products = await db.products.find(query, {"_id": 0, "reviews": 0}).to_list(200)
+        query = query.where(Product.price <= max_price)
+
+    if search:
+        query = query.where(
+            Product.name.ilike(f"%{search}%")
+        )
+
+    result = await db.execute(query)
+
+    products = result.scalars().all()
+
     if sort == "price_asc":
-        products.sort(key=lambda x: x["price"])
+        products = sorted(products, key=lambda p: p.price)
+
     elif sort == "price_desc":
-        products.sort(key=lambda x: x["price"], reverse=True)
+        products = sorted(products, key=lambda p: p.price, reverse=True)
+
     elif sort == "rating":
-        products.sort(key=lambda x: x["rating"], reverse=True)
+        products = sorted(products, key=lambda p: p.rating, reverse=True)
+
     return products
 
 
 @api_router.get("/products/{product_id}")
-async def get_product(product_id: str):
-    prod = await db.products.find_one({"id": product_id}, {"_id": 0})
-    if not prod:
-        raise HTTPException(status_code=404, detail="Product not found")
-    return prod
+async def get_product(
+    product_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(Product).where(Product.id == product_id)
+    )
+
+    product = result.scalar_one_or_none()
+
+    if not product:
+        raise HTTPException(
+            status_code=404,
+            detail="Product not found"
+        )
+
+    return product
 
 
 @api_router.post("/products/{product_id}/reviews")
-async def add_review(product_id: str, review: ReviewCreate):
-    prod = await db.products.find_one({"id": product_id}, {"_id": 0})
-    if not prod:
-        raise HTTPException(status_code=404, detail="Product not found")
-    r = Review(**review.model_dump()).model_dump()
-    await db.products.update_one({"id": product_id}, {"$push": {"reviews": r}})
-    reviews = prod.get("reviews", []) + [r]
-    new_count = len(reviews)
-    new_rating = round(sum(x["rating"] for x in reviews) / new_count, 1)
-    await db.products.update_one({"id": product_id}, {"$set": {"review_count": prod["review_count"] + 1, "rating": new_rating}})
-    return r
+async def add_review(
+    product_id: str,
+    review: ReviewCreate,
+    db: AsyncSession = Depends(get_db)
+):
+
+    result = await db.execute(
+        select(Product).where(Product.id == product_id)
+    )
+
+    product = result.scalar_one_or_none()
+
+    if not product:
+        raise HTTPException(404, "Product not found")
+
+    new_review = Review(
+        product_id=product_id,
+        author=review.author,
+        rating=review.rating,
+        comment=review.comment,
+        date=now_utc()
+    )
+
+    db.add(new_review)
+
+    product.review_count += 1
+
+    product.rating = round(
+        ((product.rating * (product.review_count - 1)) + review.rating)
+        / product.review_count,
+        1
+    )
+
+    await db.commit()
+
+    return new_review
+
 
 
 @api_router.post("/newsletter")
-async def subscribe(data: Newsletter):
-    await db.newsletter.update_one({"email": data.email}, {"$set": {"email": data.email, "date": now_utc().isoformat()}}, upsert=True)
+async def subscribe(
+    data: Newsletter,
+    db: AsyncSession = Depends(get_db)
+):
+
+    result = await db.execute(
+        select(NewsletterModel).where(
+            NewsletterModel.email == data.email
+        )
+    )
+
+    existing = result.scalar_one_or_none()
+
+    if existing is None:
+        db.add(
+            NewsletterModel(
+                email=data.email,
+                date=now_utc()
+            )
+        )
+
+        await db.commit()
+
+    return {
+        "ok": True,
+        "message": "Subscribed successfully"
+    }
     return {"ok": True, "message": "Subscribed successfully"}
 
 
 @api_router.post("/contact")
-async def contact(data: ContactMessage):
-    doc = data.model_dump()
-    doc["date"] = now_utc().isoformat()
-    await db.contact_messages.insert_one(doc)
-    return {"ok": True, "message": "Message received"}
+async def contact(
+    data: ContactMessage,
+    db: AsyncSession = Depends(get_db)
+):
+
+    message = ContactModel(
+        name=data.name,
+        email=data.email,
+        subject=data.subject,
+        message=data.message,
+        date=now_utc()
+    )
+
+    db.add(message)
+
+    await db.commit()
+
+    return {
+        "ok": True,
+        "message": "Message received"
+    }
 
 
 @api_router.post("/coupons/validate")
@@ -333,39 +545,76 @@ async def validate_coupon(data: CouponCheck):
 
 
 @api_router.post("/orders")
-async def create_order(order: OrderCreate, user=Depends(get_current_user)):
+async def create_order(
+    order: OrderCreate,
+    user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
     order_id = f"AN{uuid.uuid4().hex[:8].upper()}"
     tracking = f"ANUAE{uuid.uuid4().hex[:10].upper()}"
-    doc = order.model_dump()
-    doc.update({
-        "order_id": order_id, "tracking_number": tracking,
-        "status": "processing", "user_id": user["user_id"] if user else None,
-        "created_at": now_utc().isoformat(),
-        "steps": [
-            {"label": "Order Placed", "done": True},
-            {"label": "Processing", "done": True},
-            {"label": "Shipped", "done": False},
-            {"label": "Out for Delivery", "done": False},
-            {"label": "Delivered", "done": False},
-        ],
-    })
-    await db.orders.insert_one(doc)
-    return {"order_id": order_id, "tracking_number": tracking, "status": "processing"}
 
+    new_order = Order(
+        order_id=order_id,
+        tracking_number=tracking,
+        status="processing",
+        user_id=user.user_id if user else None,
+        customer_name=order.customer_name,
+        email=order.email,
+        phone=order.phone,
+        address=order.address,
+        city=order.city,
+        emirate=order.emirate,
+        subtotal=order.subtotal,
+        discount=order.discount,
+        shipping=order.shipping,
+        total=order.total,
+        coupon=order.coupon,
+        created_at=now_utc().isoformat(),
+    )
+
+    db.add(new_order)
+    await db.commit()
+
+    return {
+        "order_id": order_id,
+        "tracking_number": tracking,
+        "status": "processing"
+    }
 
 @api_router.get("/orders")
-async def my_orders(user=Depends(get_current_user)):
-    if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    orders = await db.orders.find({"user_id": user["user_id"]}, {"_id": 0}).sort("created_at", -1).to_list(100)
-    return orders
+async def my_orders(
+    user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
 
+    if not user:
+        raise HTTPException(401, "Not authenticated")
+
+    result = await db.execute(
+        select(Order)
+        .where(Order.user_id == user.user_id)
+    )
+
+    return result.scalars().all()
 
 @api_router.get("/orders/track/{tracking_number}")
-async def track_order(tracking_number: str):
-    order = await db.orders.find_one({"tracking_number": tracking_number.strip().upper()}, {"_id": 0})
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
+async def track_order(
+    tracking_number: str,
+    db: AsyncSession = Depends(get_db)
+):
+
+    result = await db.execute(
+        select(Order)
+        .where(
+            Order.tracking_number == tracking_number.upper()
+        )
+    )
+
+    order = result.scalar_one_or_none()
+
+    if order is None:
+        raise HTTPException(404, "Order not found")
+
     return order
 
 
@@ -387,7 +636,9 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup():
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    await seed_products()
+    async with AsyncSession(engine) as db:
+        await seed_products(db)
