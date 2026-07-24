@@ -174,5 +174,3 @@ class OrderItem(Base):
     quantity = Column(Integer)
     image = Column(Text)
 
-class UpdateOrderStatus(BaseModel):
-status: str
