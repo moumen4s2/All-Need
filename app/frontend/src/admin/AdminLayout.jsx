@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
-import { api } from "../api";
+import { api } from "../lib/api";
 
 export default function AdminLayout() {
 
