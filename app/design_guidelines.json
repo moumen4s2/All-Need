@@ -1,0 +1,139 @@
+{
+  "brand_name": "AllNeeds",
+  "app_type": "e-commerce",
+  "theme_preference": "light",
+  "typography": {
+    "headings": {
+      "font": "Outfit",
+      "fallback": "sans-serif",
+      "weights": [300, 400, 500, 700],
+      "usage": "Use tight letter spacing (tracking-tight). Do NOT use Inter, Roboto, Open Sans, or Lato. Sizes should scale fluidly up to text-5xl or text-6xl for the hero banner."
+    },
+    "body": {
+      "font": "Manrope",
+      "fallback": "sans-serif",
+      "weights": [400, 500],
+      "usage": "Clean, readable, geometric. Use leading-relaxed for long descriptions. High legibility."
+    },
+    "labels": {
+      "font": "Outfit",
+      "usage": "Uppercase, wide letter spacing (tracking-[0.2em]), text-xs or text-sm for overlines and category badges."
+    }
+  },
+  "colors": {
+    "background": {
+      "primary": "#FAFAFA",
+      "tailwind": "bg-slate-50",
+      "description": "Soft white background providing a clean and premium canvas."
+    },
+    "surface": {
+      "primary": "#FFFFFF",
+      "tailwind": "bg-white",
+      "description": "Crisp white for product cards, floating headers, and modals."
+    },
+    "accent_primary": {
+      "hex": "#EAE4D3",
+      "tailwind": "bg-stone-200",
+      "description": "Premium beige for soft emphasis and background layers."
+    },
+    "accent_secondary": {
+      "hex": "#B5D3E7",
+      "tailwind": "bg-blue-200",
+      "description": "Light blue for badges, subtle highlights, and active states."
+    },
+    "text": {
+      "primary": "#0A0A0A",
+      "secondary": "#4A4A4A",
+      "tailwind": "text-slate-950 and text-slate-600",
+      "description": "High contrast deep slate for readability. Never use pure #000000 without a slight tint."
+    }
+  },
+  "visual_enhancers": {
+    "border_radius": "Use large, friendly, but premium radii: rounded-2xl or rounded-3xl for main sections, rounded-xl for product cards, rounded-full for pills/badges.",
+    "shadows": "Apple-style soft, diffused ambient shadows. shadow-[0_8px_30px_rgb(0,0,0,0.04)] for cards.",
+    "surfaces": "Glassmorphism for sticky navigation (backdrop-blur-xl bg-white/70 with a subtle border-b). Solid backgrounds for product cards.",
+    "textures": "Minimal. Keep it clean and architectural, letting the high-quality product images speak."
+  },
+  "component_name": "General UI components",
+  "component_strategies": {
+    "buttons": "Pill-shaped (rounded-full), sharp interaction animations. Primary buttons use dark slate (bg-slate-900 text-white hover:bg-slate-800). Secondary use soft beige or light blue.",
+    "product_cards": "Flat, minimalistic. Image is the hero. Remove heavy borders, use very subtle shadow on hover, translate-y by -2px on hover. Show add-to-cart/wishlist strictly on hover or as elegant circular floating buttons.",
+    "header": "Sticky glassmorphic header, transparent over hero ONLY IF using gradient scrim/overlay so text is readable, else backdrop-blur-xl bg-white/80. Must have logo, search, language switcher (EN/AR), cart.",
+    "cart_drawer": "Shadcn Sheet component. Clean typography, clear product breakdown, sticky total and checkout button at the bottom.",
+    "filters": "Sidebar or top horizontal bar. Use Shadcn Accordions and Checkboxes. Soft gray for unselected, dark slate for selected."
+  },
+  "grids": {
+    "hero": "Asymmetric bento grid or large immersive hero. Mobile-first grid-cols-1.",
+    "featured_categories": "Bento Grid Protocol: grid-cols-1 md:grid-cols-4. Mix of square (col-span-1) and wide (col-span-2) blocks.",
+    "product_grid": "High Density Protocol: grid-cols-2 (mobile) md:grid-cols-3 lg:grid-cols-4 with gap-6 or gap-8."
+  },
+  "layouts": {
+    "spacing": "Generous Spacing Philosophy. Use 2-3x more spacing. Sections should have py-20 or py-32. Containers must use max-w-7xl mx-auto px-4 sm:px-6 lg:px-8.",
+    "alignment": "Left-align product details and forms for readability. Center-align hero headlines if it improves balance.",
+    "rtl_support": "CRITICAL: The site supports Arabic. Use Tailwind logical properties (e.g., ms-4, pe-6, text-start, border-s) instead of physical properties (ml-4, pr-6, text-left, border-l) wherever applicable."
+  },
+  "motion": {
+    "hover_states": "All interactive elements must have hover states (opacity change, subtle transform).",
+    "page_load": "Staggered fade-in (opacity 0 to 1, y: 20 to 0) for product grids using framer-motion.",
+    "transitions": "Use specific properties: transition-all duration-300 ease-out. Exclude transforms from universal transitions."
+  },
+  "accessibility": {
+    "contrast": "Text over images MUST have text-shadow or a gradient overlay underneath it. Normal text minimum 4.5:1.",
+    "focus": "focus:ring-2 focus:ring-slate-900 focus:outline-none.",
+    "testing": "All interactive and key informational elements MUST include a data-testid attribute in kebab-case."
+  },
+  "media": {
+    "images": "Images must be high quality. For mobile, hero images must not exceed 80vh. Use aspect-ratio utilities for product cards (aspect-[4/5] or aspect-square) to ensure uniform grids.",
+    "icons": "Use lucide-react with thin stroke widths (1.5 or 1.25) for a premium, delicate look."
+  },
+  "3d_libraries_and_steps": {
+    "recommendation": "Use framer-motion for UI transitions and react-fast-marquee for a 'Why Choose AllNeeds' or trust badge strip. No heavy 3D required, keep focus on real product photography."
+  },
+  "image_urls": {
+    "hero_family": {
+      "url": "https://images.unsplash.com/photo-1561525140-c2a4cc68e4bd?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTJ8MHwxfHNlYXJjaHwyfHxoYXBweSUyMGJhYnklMjBwYXJlbnRzfGVufDB8fHx8MTc4MjkyNjQ0MHww&ixlib=rb-4.1.0&q=85",
+      "description": "Happy family on green grass, representing trust, joy, and the premium lifestyle target of AllNeeds.",
+      "category": "Hero Banner Background"
+    },
+    "category_stroller": {
+      "url": "https://images.pexels.com/photos/5791032/pexels-photo-5791032.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "description": "Mother bending over a premium stroller outdoors.",
+      "category": "Travel / Stroller Category Image"
+    },
+    "category_nursery": {
+      "url": "https://images.pexels.com/photos/18036792/pexels-photo-18036792.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "description": "Cozy minimalist beige nursery room.",
+      "category": "Nursery / Furniture Category Image"
+    },
+    "category_playtime": {
+      "url": "https://images.unsplash.com/photo-1603367563698-67012943fd67?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTJ8MHwxfHNlYXJjaHwxfHxoYXBweSUyMGJhYnklMjBwYXJlbnRzfGVufDB8fHx8MTc4MjkyNjQ0MHww&ixlib=rb-4.1.0&q=85",
+      "description": "Man carrying a baby girl, representing playtime and daily care.",
+      "category": "Toys & Playtime Category Image"
+    }
+  },
+  "component_path": "/app/src/components/ui/",
+  "instructions_to_main_agent": {
+    "files": "Use .js and .jsx files, NOT .tsx.",
+    "styling": "Tailwind CSS with logical properties (start/end instead of left/right) for RTL (Arabic) support. Do not center align the root .App.",
+    "testing": "MANDATORY: Add data-testid to every button, link, form input, menu, error message, and tab.",
+    "components": "Do NOT use HTML-based components for advanced UI (dropdowns, calendars, etc). Use Shadcn JS versions if available or build cleanly.",
+    "headers": "NEVER use a fully transparent header over content without a scrim or blur."
+  },
+  "UNIVERSAL GUIDELINES FOR MAIN AGENT": [
+    "You tend to converge toward generic, 'on distribution' outputs. Avoid this: make creative, distinctive frontends that surprise and delight.",
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients.",
+    "Don't make generic centered layouts, simplistic gradients, and uniform styling.",
+    "Create depth through layered design elements with z-index hierarchy.",
+    "Use glass-morphism effects with backdrop filters (12-24px blur).",
+    "You MUST NOT apply universal transition. Eg: transition: all. This results in breaking transforms. Always add transitions for specific interactive elements.",
+    "You MUST NOT center align the app container, ie do not add .App { text-align: center; } in the css file.",
+    "Always use modern button styles like pill-shaped, or sharp button with interaction animations & color relevant to the app style.",
+    "NEVER: use AI assistant Emoji characters like 🤖🧠💭💡🔮🎯 etc for icons.",
+    "Every interaction needs micro-animations - hover states, transitions, entrance animations. Static = dead.",
+    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
+    "Subtle grain textures, custom cursors, selection states, and loading animations separate good from extraordinary.",
+    "Prioritize using pre-existing components from src/components/ui when applicable.",
+    "Use sonner for toasts. Sonner components are located in /app/src/components/ui/sonner.js",
+    "All interactive and key informational elements MUST include a data-testid attribute to facilitate robust automated testing."
+  ]
+}

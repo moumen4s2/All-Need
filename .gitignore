@@ -1,0 +1,32 @@
+# Node
+node_modules/
+npm-debug.log
+
+# React
+build/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Database
+*.db
+*.sqlite3
+
+# Environment
+.env
+.env.local
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+*.zip
+
+app/memory/
+app/auth_testing.md
