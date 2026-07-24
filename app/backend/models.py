@@ -7,7 +7,7 @@ from sqlalchemy import (
     Text,
     ForeignKey
 )
-
+from pydantic import BaseModel
 from database import Base
 
 
@@ -41,7 +41,7 @@ class Admin(Base):
     password = Column(String)
 
     name = Column(String)
-    
+
 class AdminSession(Base):
     __tablename__ = "admin_sessions"
 
@@ -174,5 +174,5 @@ class OrderItem(Base):
     quantity = Column(Integer)
     image = Column(Text)
 
-    class UpdateOrderStatus(BaseModel):
-    status: str
+class UpdateOrderStatus(BaseModel):
+status: str
