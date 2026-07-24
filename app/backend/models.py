@@ -31,6 +31,29 @@ class UserSession(Base):
     expires_at = Column(String)
     created_at = Column(String)
 
+class Admin(Base):
+    __tablename__ = "admins"
+
+    id = Column(Integer, primary_key=True)
+
+    email = Column(String, unique=True)
+
+    password = Column(String)
+
+    name = Column(String)
+    
+class AdminSession(Base):
+    __tablename__ = "admin_sessions"
+
+    id = Column(Integer, primary_key=True)
+
+    admin_id = Column(Integer)
+
+    session_token = Column(String, unique=True)
+
+    created_at = Column(String)
+
+    expires_at = Column(String)
 
 class Product(Base):
     __tablename__ = "products"
@@ -150,3 +173,6 @@ class OrderItem(Base):
     price = Column(Float)
     quantity = Column(Integer)
     image = Column(Text)
+
+    class UpdateOrderStatus(BaseModel):
+    status: str

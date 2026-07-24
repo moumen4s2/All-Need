@@ -10,6 +10,7 @@ from models import ContactMessage as ContactModel
 from pathlib import Path
 from typing import List, Optional
 from datetime import datetime, timezone, timedelta
+from sqlalchemy import select, func
 
 from pydantic import BaseModel, Field, EmailStr
 
@@ -27,6 +28,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models import (
     User,
     UserSession,
+    Admin,
+    AdminSession,
     Product,
     Review,
     Newsletter,
@@ -34,6 +37,48 @@ from models import (
     Order,
     OrderItem
 )
+from passlib.context import CryptContext
+
+pwd = CryptContext(
+    schemes=["bcrypt"],
+    deprecated="auto"
+)
+async def create_default_admin():
+
+    async with AsyncSession(engine) as db:
+
+        result = await db.execute(
+            select(Admin).where(
+                Admin.email == "admin@allneeds.ae"
+            )
+        )
+
+        admin = result.scalar_one_or_none()
+
+        if admin:
+            return
+
+        db.add(
+
+            Admin(
+
+                name="Administrator",
+
+                email="admin@allneeds.ae",
+
+                password=pwd.hash("admin123")
+
+            )
+
+        )
+
+        await db.commit()
+
+        print("Default admin created.")
+
+class AdminLogin(BaseModel):
+    email: EmailStr
+    password: str
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -156,6 +201,142 @@ async def get_current_user(
 
     return result.scalar_one_or_none()
 
+@api_router.post("/admin/login")
+async def admin_login(
+    data: AdminLogin,
+    response: Response,
+    db: AsyncSession = Depends(get_db)
+):
+
+    result = await db.execute(
+        select(Admin).where(
+            Admin.email == data.email
+        )
+    )
+
+    admin = result.scalar_one_or_none()
+
+    if not admin:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid credentials"
+        )
+
+    if not pwd.verify(
+        data.password,
+        admin.password
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid credentials"
+        )
+
+    token = str(uuid.uuid4())
+
+    session = AdminSession(
+
+        admin_id=admin.id,
+
+        session_token=token,
+
+        created_at=now_utc().isoformat(),
+
+        expires_at=(
+            now_utc() + timedelta(days=30)
+        ).isoformat()
+
+    )
+
+    db.add(session)
+
+    await db.commit()
+
+    response.set_cookie(
+
+        "admin_token",
+
+        token,
+
+        httponly=True,
+
+        samesite="lax",
+
+        max_age=60*60*24*30
+
+    )
+
+    return {
+        "ok": True,
+        "name": admin.name
+    }
+
+async def get_current_admin(
+
+    request: Request,
+
+    db: AsyncSession = Depends(get_db)
+
+):
+
+    token = request.cookies.get("admin_token")
+
+    if not token:
+
+        raise HTTPException(
+            status_code=401,
+            detail="Unauthorized"
+        )
+
+    result = await db.execute(
+
+        select(AdminSession).where(
+            AdminSession.session_token == token
+        )
+
+    )
+
+    session = result.scalar_one_or_none()
+
+    if not session:
+
+        raise HTTPException(
+            status_code=401,
+            detail="Unauthorized"
+        )
+
+    result = await db.execute(
+
+        select(Admin).where(
+            Admin.id == session.admin_id
+        )
+
+    )
+
+    admin = result.scalar_one()
+
+    return admin
+
+@api_router.get("/admin/me")
+async def admin_me(
+    admin: Admin = Depends(get_current_admin)
+):
+    return {
+        "username": admin.username
+    }
+
+@api_router.post("/admin/logout")
+async def admin_logout(
+    response: Response
+):
+    response.delete_cookie(
+        key="admin_token",
+        httponly=True,
+        samesite="lax"
+    )
+
+    return {
+        "success": True
+    }
 
 async def create_session(
     request: Request,
@@ -626,6 +807,206 @@ async def track_order(
 
     return order
 
+@api_router.get("/admin/dashboard")
+async def admin_dashboard(
+    admin: Admin = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    products = await db.scalar(
+        select(func.count()).select_from(Product)
+    )
+
+    orders = await db.scalar(
+        select(func.count()).select_from(Order)
+    )
+
+    newsletter = await db.scalar(
+        select(func.count()).select_from(Newsletter)
+    )
+
+    messages = await db.scalar(
+        select(func.count()).select_from(ContactMessage)
+    )
+
+    latest_orders_result = await db.execute(
+        select(Order)
+        .order_by(Order.created_at.desc())
+        .limit(5)
+    )
+
+    latest_orders = latest_orders_result.scalars().all()
+
+    return {
+        "products": products or 0,
+        "orders": orders or 0,
+        "categories": 6,
+        "newsletter": newsletter or 0,
+        "messages": messages or 0,
+        "latest_orders": latest_orders
+    }
+
+
+@api_router.get("/admin/products")
+async def admin_products(
+    admin: Admin = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(Product)
+        .order_by(Product.name)
+    )
+
+    return result.scalars().all()
+
+
+@api_router.post("/admin/products")
+async def create_product(
+    product: Product,
+    admin: Admin = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    existing = await db.execute(
+        select(Product).where(Product.id == product.id)
+    )
+
+    if existing.scalar_one_or_none():
+        raise HTTPException(
+            status_code=400,
+            detail="Product already exists"
+        )
+
+    db.add(product)
+    await db.commit()
+    await db.refresh(product)
+
+    return product
+
+
+@api_router.put("/admin/products/{product_id}")
+async def update_product(
+    product_id: str,
+    data: Product,
+    admin: Admin = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(Product).where(Product.id == product_id)
+    )
+
+    product = result.scalar_one_or_none()
+
+    if not product:
+        raise HTTPException(
+            status_code=404,
+            detail="Product not found"
+        )
+
+    product.name = data.name
+    product.name_ar = data.name_ar
+    product.category = data.category
+    product.price = data.price
+    product.old_price = data.old_price
+    product.image = data.image
+    product.description = data.description
+    product.description_ar = data.description_ar
+    product.best_seller = data.best_seller
+    product.new_arrival = data.new_arrival
+    product.in_stock = data.in_stock
+    product.rating = data.rating
+    product.review_count = data.review_count
+
+    await db.commit()
+    await db.refresh(product)
+
+    return product
+
+
+@api_router.delete("/admin/products/{product_id}")
+async def delete_product(
+    product_id: str,
+    admin: Admin = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(Product).where(Product.id == product_id)
+    )
+
+    product = result.scalar_one_or_none()
+
+    if not product:
+        raise HTTPException(
+            status_code=404,
+            detail="Product not found"
+        )
+
+    await db.delete(product)
+    await db.commit()
+
+    return {
+        "success": True
+    }
+
+@api_router.get("/admin/orders")
+async def admin_orders(
+    admin: Admin = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(Order)
+        .order_by(Order.created_at.desc())
+    )
+
+    return result.scalars().all()
+
+
+@api_router.get("/admin/orders/{order_id}")
+async def admin_order(
+    order_id: str,
+    admin: Admin = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(Order)
+        .where(Order.order_id == order_id)
+    )
+
+    order = result.scalar_one_or_none()
+
+    if not order:
+        raise HTTPException(
+            status_code=404,
+            detail="Order not found"
+        )
+
+    return order
+
+
+@api_router.put("/admin/orders/{order_id}")
+async def update_order_status(
+    order_id: str,
+    body: UpdateOrderStatus,
+    admin: Admin = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(Order)
+        .where(Order.order_id == order_id)
+    )
+
+    order = result.scalar_one_or_none()
+
+    if not order:
+        raise HTTPException(
+            status_code=404,
+            detail="Order not found"
+        )
+
+    order.status = body.status
+
+    await db.commit()
+    await db.refresh(order)
+
+    return order
 
 @api_router.get("/")
 async def root():
@@ -640,5 +1021,4 @@ async def startup():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    async with AsyncSession(engine) as db:
-        await seed_products(db)
+    await create_default_admin()

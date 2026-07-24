@@ -1,63 +1,89 @@
-import { Outlet, NavLink } from "react-router-dom";
+import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { api } from "../api";
 
 export default function AdminLayout() {
-  return (
-    <div className="min-h-screen bg-slate-100 flex">
 
-      <aside className="w-64 bg-slate-900 text-white p-6">
+    const navigate = useNavigate();
 
-        <h1 className="text-3xl font-bold mb-10">
-          AllNeeds
-        </h1>
+    async function logout() {
 
-        <nav className="flex flex-col gap-3">
+        try {
 
-          <NavLink
-            to="/admin"
-            end
-            className="px-4 py-3 rounded-lg hover:bg-slate-700"
-          >
-            Dashboard
-          </NavLink>
+            await api.post("/admin/logout");
 
-          <NavLink
-            to="/admin/products"
-            className="px-4 py-3 rounded-lg hover:bg-slate-700"
-          >
-            Products
-          </NavLink>
+        } catch {}
 
-          <NavLink
-            to="/admin/categories"
-            className="px-4 py-3 rounded-lg hover:bg-slate-700"
-          >
-            Categories
-          </NavLink>
+        navigate("/admin/login");
 
-          <NavLink
-            to="/admin/orders"
-            className="px-4 py-3 rounded-lg hover:bg-slate-700"
-          >
-            Orders
-          </NavLink>
+    }
 
-          <NavLink
-            to="/admin/coupons"
-            className="px-4 py-3 rounded-lg hover:bg-slate-700"
-          >
-            Coupons
-          </NavLink>
+    return (
 
-        </nav>
+        <div className="min-h-screen bg-slate-100 flex">
 
-      </aside>
+            <aside className="w-64 bg-slate-900 text-white p-6 flex flex-col">
 
-      <main className="flex-1 p-8">
+                <h1 className="text-3xl font-bold mb-10">
+                    AllNeeds
+                </h1>
 
-        <Outlet />
+                <nav className="flex flex-col gap-3">
 
-      </main>
+                    <NavLink
+                        to="/admin"
+                        end
+                        className="px-4 py-3 rounded-lg hover:bg-slate-700"
+                    >
+                        Dashboard
+                    </NavLink>
 
-    </div>
-  );
+                    <NavLink
+                        to="/admin/products"
+                        className="px-4 py-3 rounded-lg hover:bg-slate-700"
+                    >
+                        Products
+                    </NavLink>
+
+                    <NavLink
+                        to="/admin/categories"
+                        className="px-4 py-3 rounded-lg hover:bg-slate-700"
+                    >
+                        Categories
+                    </NavLink>
+
+                    <NavLink
+                        to="/admin/orders"
+                        className="px-4 py-3 rounded-lg hover:bg-slate-700"
+                    >
+                        Orders
+                    </NavLink>
+
+                    <NavLink
+                        to="/admin/coupons"
+                        className="px-4 py-3 rounded-lg hover:bg-slate-700"
+                    >
+                        Coupons
+                    </NavLink>
+
+                </nav>
+
+                <button
+                    onClick={logout}
+                    className="mt-auto bg-red-600 hover:bg-red-700 rounded-lg py-3 font-semibold"
+                >
+                    Logout
+                </button>
+
+            </aside>
+
+            <main className="flex-1 p-8">
+
+                <Outlet />
+
+            </main>
+
+        </div>
+
+    );
+
 }
