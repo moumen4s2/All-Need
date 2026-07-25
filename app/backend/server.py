@@ -1,30 +1,25 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-from models import Newsletter as NewsletterModel
+
 import os
 import logging
 import uuid
 import httpx
-from models import ContactMessage as ContactModel
-from pathlib import Path
-from typing import List, Optional
-from datetime import datetime, timezone, timedelta
-from sqlalchemy import select, func
 
-from pydantic import BaseModel, Field, EmailStr
+from pathlib import Path
+from datetime import datetime, timezone, timedelta
+
+from passlib.context import CryptContext
 
 # SQLAlchemy
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
+# Database
 from database import Base, engine, get_db
-from models import Product, Review
-from sqlalchemy import select, func
-# Models
-from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import AsyncSession
 
+# SQLAlchemy Models
 from models import (
     User,
     UserSession,
@@ -35,9 +30,22 @@ from models import (
     Newsletter,
     ContactMessage,
     Order,
-    OrderItem
+    OrderItem,
 )
-from passlib.context import CryptContext
+
+# Pydantic Schemas
+from schemas import (
+    ProductCreate,
+    AdminLogin,
+    UpdateOrderStatus,
+    ReviewSchema,
+    ReviewCreate,
+    NewsletterCreate,
+    ContactMessageCreate,
+    CouponCheck,
+    OrderItemCreate,
+    OrderCreate,
+)
 
 pwd = CryptContext(
     schemes=["bcrypt"],
@@ -76,12 +84,6 @@ async def create_default_admin():
 
         print("Default admin created.")
 
-class AdminLogin(BaseModel):
-    email: EmailStr
-    password: str
-
-class UpdateOrderStatus(BaseModel):
-    status: str
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -105,62 +107,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# ---------------- Models ----------------
-def now_utc():
-    return datetime.now(timezone.utc)
-
-
-class Review(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    author: str
-    rating: int
-    comment: str
-    date: str = Field(default_factory=lambda: now_utc().isoformat())
-
-
-class ReviewCreate(BaseModel):
-    author: str
-    rating: int
-    comment: str
-
-
-class Newsletter(BaseModel):
-    email: EmailStr
-
-
-class ContactMessage(BaseModel):
-    name: str
-    email: EmailStr
-    subject: str
-    message: str
-
-
-class CouponCheck(BaseModel):
-    code: str
-
-
-class OrderItem(BaseModel):
-    product_id: str
-    name: str
-    price: float
-    quantity: int
-    image: str
-
-
-class OrderCreate(BaseModel):
-    items: List[OrderItem]
-    subtotal: float
-    discount: float = 0
-    shipping: float = 0
-    total: float
-    coupon: Optional[str] = None
-    customer_name: str
-    email: EmailStr
-    phone: str
-    address: str
-    city: str
-    emirate: str
-
 
 # ---------------- Auth helpers ----------------
 from sqlalchemy import select
@@ -864,7 +810,7 @@ async def admin_products(
 
 @api_router.post("/admin/products")
 async def create_product(
-    product: Product,
+    product: ProductCreate,
     admin: Admin = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db)
 ):
@@ -878,17 +824,21 @@ async def create_product(
             detail="Product already exists"
         )
 
-    db.add(product)
-    await db.commit()
-    await db.refresh(product)
+    db_product = Product(**product.model_dump())
 
-    return product
+    db.add(db_product)
+
+    await db.commit()
+
+    await db.refresh(db_product)
+
+    return db_product
 
 
 @api_router.put("/admin/products/{product_id}")
 async def update_product(
     product_id: str,
-    data: Product,
+    data: ProductCreate,
     admin: Admin = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db)
 ):
