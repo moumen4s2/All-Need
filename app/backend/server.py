@@ -654,7 +654,7 @@ async def subscribe(
 
 @api_router.post("/contact")
 async def contact(
-    data: ContactMessagecreate,
+    data: ContactMessageCreate,
     db: AsyncSession = Depends(get_db)
 ):
 
