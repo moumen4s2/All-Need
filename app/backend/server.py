@@ -9,8 +9,9 @@ import httpx
 
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
-
+from schemas import now_utc
 from passlib.context import CryptContext
+from typing import Optional
 
 # SQLAlchemy
 from sqlalchemy import select, func
@@ -622,13 +623,13 @@ async def add_review(
 
 @api_router.post("/newsletter")
 async def subscribe(
-    data: Newsletter,
+    data: NewsletterCreate,
     db: AsyncSession = Depends(get_db)
 ):
 
     result = await db.execute(
-        select(NewsletterModel).where(
-            NewsletterModel.email == data.email
+        select(Newsletter).where(
+            Newsletter.email == data.email
         )
     )
 
@@ -636,7 +637,7 @@ async def subscribe(
 
     if existing is None:
         db.add(
-            NewsletterModel(
+            Newsletter(
                 email=data.email,
                 date=now_utc()
             )
@@ -653,11 +654,11 @@ async def subscribe(
 
 @api_router.post("/contact")
 async def contact(
-    data: ContactMessage,
+    data: ContactMessagecreate,
     db: AsyncSession = Depends(get_db)
 ):
 
-    message = ContactModel(
+    message = ContactMessage(
         name=data.name,
         email=data.email,
         subject=data.subject,

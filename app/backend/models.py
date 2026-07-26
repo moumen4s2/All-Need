@@ -35,12 +35,11 @@ class Admin(Base):
     __tablename__ = "admins"
 
     id = Column(Integer, primary_key=True)
-
     email = Column(String, unique=True)
-
     password = Column(String)
-
     name = Column(String)
+    username = Column(String, unique=True)
+
 
 class AdminSession(Base):
     __tablename__ = "admin_sessions"
