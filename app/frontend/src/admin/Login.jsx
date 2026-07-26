@@ -6,7 +6,7 @@ export default function Login() {
 
     const navigate = useNavigate();
 
-    const [username, setUsername] = useState("");
+    const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
     const [loading, setLoading] = useState(false);
@@ -22,7 +22,7 @@ export default function Login() {
         try {
 
             await api.post("/admin/login", {
-                username,
+                email,
                 password
             });
 
@@ -32,7 +32,7 @@ export default function Login() {
 
             setError(
                 err.response?.data?.detail ||
-                "Invalid username or password"
+                "Invalid email or password"
             );
 
         }
@@ -62,9 +62,9 @@ export default function Login() {
 
                     <input
                         type="text"
-                        placeholder="Username"
-                        value={username}
-                        onChange={(e)=>setUsername(e.target.value)}
+                        placeholder="Email"
+                        value={email}
+                        onChange={(e)=>setEmail(e.target.value)}
                         className="w-full border rounded-lg p-3"
                     />
 
