@@ -272,7 +272,7 @@ async def admin_me(
     admin: Admin = Depends(get_current_admin)
 ):
     return {
-        "username": admin.username
+        "name": admin.name
     }
 
 @api_router.post("/admin/logout")

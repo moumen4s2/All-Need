@@ -38,7 +38,6 @@ class Admin(Base):
     email = Column(String, unique=True)
     password = Column(String)
     name = Column(String)
-    username = Column(String, unique=True)
 
 
 class AdminSession(Base):
