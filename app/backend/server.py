@@ -102,7 +102,8 @@ logger = logging.getLogger(__name__)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000"
+        "http://localhost:3000",
+        "https://all-need.pages.dev",
         ],
     allow_credentials=True,
     allow_methods=["*"],
