@@ -4,45 +4,50 @@ import { api } from "../lib/api";
 export default function Categories() {
 
     const [categories, setCategories] = useState([]);
-    const [name, setName] = useState("");
-    const [slug, setSlug] = useState("");
+
+    const [form, setForm] = useState({
+        name: "",
+        image: ""
+    });
 
     useEffect(() => {
         loadCategories();
     }, []);
 
     async function loadCategories() {
-
         const res = await api.get("/admin/categories");
         setCategories(res.data);
+    }
 
+    function update(e) {
+        setForm({
+            ...form,
+            [e.target.name]: e.target.value
+        });
     }
 
     async function addCategory(e) {
 
         e.preventDefault();
 
-        await api.post("/admin/categories", {
-            name,
-            slug
+        await api.post("/admin/categories", form);
+
+        setForm({
+            name: "",
+            image: ""
         });
 
-        setName("");
-        setSlug("");
-
         loadCategories();
-
     }
 
-    async function removeCategory(slug) {
+    async function removeCategory(id) {
 
         if (!window.confirm("Delete this category?"))
             return;
 
-        await api.delete(`/admin/categories/${slug}`);
+        await api.delete(`/admin/categories/${id}`);
 
         loadCategories();
-
     }
 
     return (
@@ -55,27 +60,60 @@ export default function Categories() {
 
             <form
                 onSubmit={addCategory}
-                className="flex gap-4 mb-8"
+                className="space-y-4 mb-8"
             >
 
                 <input
+                    name="name"
                     placeholder="Category Name"
-                    value={name}
-                    onChange={(e)=>setName(e.target.value)}
-                    className="border rounded-lg p-3 flex-1"
+                    value={form.name}
+                    onChange={update}
+                    className="border rounded-lg p-3 w-full"
                 />
 
-                <input
-                    placeholder="Slug"
-                    value={slug}
-                    onChange={(e)=>setSlug(e.target.value)}
-                    className="border rounded-lg p-3 flex-1"
-                />
+                <div className="flex gap-2">
+
+                    <input
+                        name="image"
+                        placeholder="Category Image URL"
+                        value={form.image}
+                        onChange={update}
+                        className="border rounded-lg p-3 flex-1"
+                    />
+
+                    <button
+                        type="button"
+                        className="border rounded-lg px-4 hover:bg-gray-100"
+                        onClick={() => {
+
+                            const url = prompt("Paste image URL");
+
+                            if (url) {
+                                setForm(prev => ({
+                                    ...prev,
+                                    image: url
+                                }));
+                            }
+
+                        }}
+                    >
+                        ⋯
+                    </button>
+
+                </div>
+
+                {form.image && (
+                    <img
+                        src={form.image}
+                        alt=""
+                        className="w-32 rounded border"
+                    />
+                )}
 
                 <button
-                    className="bg-pink-600 text-white px-6 rounded-lg"
+                    className="bg-pink-600 text-white px-6 py-3 rounded-lg"
                 >
-                    Add
+                    Add Category
                 </button>
 
             </form>
@@ -89,11 +127,11 @@ export default function Categories() {
                         <tr className="border-b">
 
                             <th className="p-4 text-left">
-                                Name
+                                Image
                             </th>
 
                             <th className="p-4 text-left">
-                                Slug
+                                Name
                             </th>
 
                             <th className="p-4">
@@ -105,25 +143,35 @@ export default function Categories() {
 
                     <tbody>
 
-                        {categories.map(category=>(
+                        {categories.map(category => (
 
                             <tr
-                                key={category.slug}
+                                key={category.id}
                                 className="border-b"
                             >
 
                                 <td className="p-4">
-                                    {category.en}
+
+                                    {category.image && (
+
+                                        <img
+                                            src={category.image}
+                                            alt=""
+                                            className="w-16 h-16 object-cover rounded"
+                                        />
+
+                                    )}
+
                                 </td>
 
                                 <td className="p-4">
-                                    {category.slug}
+                                    {category.name}
                                 </td>
 
                                 <td className="p-4 text-right">
 
                                     <button
-                                        onClick={()=>removeCategory(category.slug)}
+                                        onClick={() => removeCategory(category.id)}
                                         className="text-red-600"
                                     >
                                         Delete
