@@ -907,6 +907,96 @@ async def delete_product(
         "success": True
     }
 
+@api_router.get("/admin/categories")
+async def admin_categories(
+    admin: Admin = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(Category).order_by(Category.id)
+    )
+
+    return result.scalars().all()
+
+@api_router.post("/admin/categories")
+async def create_category(
+    data: CategoryCreate,
+    admin: Admin = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+
+    category = Category(
+        name=data.name,
+        image=data.image
+    )
+
+    db.add(category)
+
+    await db.commit()
+    await db.refresh(category)
+
+    return category
+
+@api_router.put("/admin/categories/{category_id}")
+async def update_category(
+    category_id: int,
+    data: CategoryCreate,
+    admin: Admin = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+
+    result = await db.execute(
+        select(Category).where(
+            Category.id == category_id
+        )
+    )
+
+    category = result.scalar_one_or_none()
+
+    if not category:
+        raise HTTPException(
+            status_code=404,
+            detail="Category not found"
+        )
+
+    category.name = data.name
+    category.image = data.image
+
+    await db.commit()
+    await db.refresh(category)
+
+    return category
+
+@api_router.delete("/admin/categories/{category_id}")
+async def delete_category(
+    category_id: int,
+    admin: Admin = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+
+    result = await db.execute(
+        select(Category).where(
+            Category.id == category_id
+        )
+    )
+
+    category = result.scalar_one_or_none()
+
+    if not category:
+        raise HTTPException(
+            status_code=404,
+            detail="Category not found"
+        )
+
+    await db.delete(category)
+    await db.commit()
+
+    return {
+        "ok": True
+    }
+
+
+
 @api_router.get("/admin/orders")
 async def admin_orders(
     admin: Admin = Depends(get_current_admin),

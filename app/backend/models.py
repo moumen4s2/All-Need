@@ -61,7 +61,16 @@ class Product(Base):
     name = Column(String)
     name_ar = Column(String)
 
-    category = Column(String)
+    category_id = Column(
+        Integer,
+        ForeignKey("categories.id"),
+        nullable=False
+    )
+
+    category = relationship(
+        "Category",
+        back_populates="products"
+    )
 
     price = Column(Float)
     old_price = Column(Float, nullable=True)
@@ -79,6 +88,21 @@ class Product(Base):
     review_count = Column(Integer, default=0)
 
     in_stock = Column(Boolean, default=True)
+
+class Category(Base):
+    __tablename__ = "categories"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    name = Column(String, unique=True, nullable=False)
+
+    image = Column(String, nullable=True)
+
+    products = relationship(
+        "Product",
+        back_populates="category",
+        cascade="all, delete"
+    )
 
 
 class Review(Base):

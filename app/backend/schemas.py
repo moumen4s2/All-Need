@@ -13,7 +13,7 @@ class ProductCreate(BaseModel):
     id: str
     name: str
     name_ar: str
-    category: str
+    category_id: int
     price: float
     old_price: Optional[float] = None
     image: str
@@ -24,6 +24,17 @@ class ProductCreate(BaseModel):
     rating: float = 5
     review_count: int = 0
     in_stock: bool = True
+
+class CategoryCreate(BaseModel):
+    name: str
+    image: str | None = None
+
+
+class CategoryResponse(CategoryCreate):
+    id: int
+
+    class Config:
+        from_attributes = True
 
 
 class AdminLogin(BaseModel):
