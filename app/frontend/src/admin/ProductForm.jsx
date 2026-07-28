@@ -7,13 +7,15 @@ export default function ProductForm() {
     const navigate = useNavigate();
     const { id } = useParams();
 
+    const [categories, setCategories] = useState([]);
+
     const [form, setForm] = useState({
         id: "",
         name: "",
         name_ar: "",
-        category: "",
-        price: 0,
-        old_price: 0,
+        category_id: "",
+        price: "",
+        old_price: "",
         image: "",
         description: "",
         description_ar: "",
@@ -25,19 +27,30 @@ export default function ProductForm() {
     });
 
     useEffect(() => {
+        loadCategories();
 
         if (id) {
             loadProduct();
         }
-
     }, [id]);
 
-    async function loadProduct() {
-
+    async function loadCategories() {
         try {
+            const res = await api.get("/categories");
+            setCategories(res.data);
+        } catch (err) {
+            console.error(err);
+        }
+    }
 
+    async function loadProduct() {
+        try {
             const res = await api.get(`/products/${id}`);
-            setForm(res.data);
+
+            setForm({
+                ...res.data,
+                category_id: res.data.category_id ?? ""
+            });
 
         } catch {
 
@@ -45,7 +58,6 @@ export default function ProductForm() {
             navigate("/admin/products");
 
         }
-
     }
 
     function update(e) {
@@ -58,7 +70,7 @@ export default function ProductForm() {
                 type === "checkbox"
                     ? checked
                     : type === "number"
-                        ? Number(value)
+                        ? (value === "" ? "" : Number(value))
                         : value
         }));
 
@@ -68,20 +80,28 @@ export default function ProductForm() {
 
         e.preventDefault();
 
+        const data = {
+            ...form,
+            old_price:
+                form.old_price === ""
+                    ? null
+                    : Number(form.old_price)
+        };
+
         try {
 
             if (id) {
 
                 await api.put(
                     `/admin/products/${id}`,
-                    form
+                    data
                 );
 
             } else {
 
                 await api.post(
                     "/admin/products",
-                    form
+                    data
                 );
 
             }
@@ -104,7 +124,9 @@ export default function ProductForm() {
         <div className="max-w-3xl">
 
             <h1 className="text-4xl font-bold mb-8">
+
                 {id ? "Edit Product" : "Add Product"}
+
             </h1>
 
             <form
@@ -127,7 +149,7 @@ export default function ProductForm() {
                 <input
                     name="name"
                     value={form.name}
-                    placeholder="Name"
+                    placeholder="Product Name"
                     onChange={update}
                     className="w-full border rounded-lg p-3"
                 />
@@ -135,42 +157,95 @@ export default function ProductForm() {
                 <input
                     name="name_ar"
                     value={form.name_ar}
-                    placeholder="Arabic Name"
+                    placeholder="Arabic Product Name"
                     onChange={update}
                     className="w-full border rounded-lg p-3"
                 />
 
-                <input
-                    name="category"
-                    value={form.category}
-                    placeholder="Category"
+                {/* Category */}
+
+                <select
+                    name="category_id"
+                    value={form.category_id}
                     onChange={update}
                     className="w-full border rounded-lg p-3"
-                />
+                >
+
+                    <option value="">
+                        Select Category
+                    </option>
+
+                    {categories.map(cat => (
+
+                        <option
+                            key={cat.id}
+                            value={cat.id}
+                        >
+                            {cat.name}
+                        </option>
+
+                    ))}
+
+                </select>
 
                 <input
+                    type="number"
                     name="price"
-                    type="number"
                     value={form.price}
+                    placeholder="Price (AED)"
                     onChange={update}
                     className="w-full border rounded-lg p-3"
                 />
 
                 <input
-                    name="old_price"
                     type="number"
+                    name="old_price"
                     value={form.old_price}
+                    placeholder="Old Price (optional)"
                     onChange={update}
                     className="w-full border rounded-lg p-3"
                 />
 
-                <input
-                    name="image"
-                    value={form.image}
-                    placeholder="Image URL"
-                    onChange={update}
-                    className="w-full border rounded-lg p-3"
-                />
+                {/* Image */}
+
+                <div className="flex gap-2">
+
+                    <input
+                        name="image"
+                        value={form.image}
+                        placeholder="https://example.com/image.jpg"
+                        onChange={update}
+                        className="flex-1 border rounded-lg p-3"
+                    />
+
+                    <button
+                        type="button"
+                        className="border rounded-lg px-4 text-xl hover:bg-gray-100"
+                        onClick={() => {
+                            const url = prompt("Paste image URL");
+
+                            if (url) {
+                                setForm(prev => ({
+                                    ...prev,
+                                    image: url
+                                }));
+                            }
+                        }}
+                    >
+                        ⋯
+                    </button>
+
+                </div>
+
+                {form.image && (
+
+                    <img
+                        src={form.image}
+                        alt=""
+                        className="w-40 rounded border"
+                    />
+
+                )}
 
                 <textarea
                     name="description"

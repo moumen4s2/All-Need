@@ -43,7 +43,7 @@ export const ProductDetails = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12" data-testid="product-details-page">
       <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-8">
         <Link to="/" className="hover:text-slate-900">{t.nav.home}</Link><ChevronRight className="w-3 h-3" />
-        <Link to={`/shop?category=${product.category}`} className="hover:text-slate-900 capitalize">{product.category}</Link><ChevronRight className="w-3 h-3" />
+        <Link to={`/shop?category=${product.category_id}`} className="hover:text-slate-900 capitalize">{product.category_id}</Link><ChevronRight className="w-3 h-3" />
         <span className="text-slate-900">{productName(product)}</span>
       </div>
 

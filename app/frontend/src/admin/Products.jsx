@@ -114,7 +114,7 @@ export default function Products() {
                             </td>
 
                             <td className="p-4">
-                                {product.category}
+                                {product.category_id}
                             </td>
 
                             <td className="p-4">

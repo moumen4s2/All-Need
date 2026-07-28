@@ -500,29 +500,31 @@ async def seed_products(db: AsyncSession):
 async def get_categories(
     db: AsyncSession = Depends(get_db)
 ):
+    result = await db.execute(select(Category))
+    categories = result.scalars().all()
 
-    result = []
+    data = []
 
-    for c in CATEGORIES:
+    for category in categories:
 
-        res = await db.execute(
-            select(func.count(Product.id))
-            .where(Product.category == c["slug"])
+        count_result = await db.execute(
+            select(func.count(Product.id)).where(
+                Product.category_id == category.id
+            )
         )
 
-        count = res.scalar()
-
-        result.append({
-            **c,
-            "count": count
+        data.append({
+            "id": category.id,
+            "name": category.name,
+            "image": category.image,
+            "count": count_result.scalar()
         })
 
-    return result
-
+    return data
 
 @api_router.get("/products")
 async def get_products(
-    category: Optional[str] = None,
+    category_id: Optional[int] = None,
     search: Optional[str] = None,
     sort: Optional[str] = None,
     best_seller: Optional[bool] = None,
@@ -534,8 +536,8 @@ async def get_products(
 
     query = select(Product)
 
-    if category:
-        query = query.where(Product.category == category)
+    if category_id is not None:
+        query = query.where(Product.category_id == category_id)
 
     if best_seller:
         query = query.where(Product.best_seller == True)
@@ -866,7 +868,7 @@ async def update_product(
 
     product.name = data.name
     product.name_ar = data.name_ar
-    product.category = data.category
+    product.category_id = data.category_id
     product.price = data.price
     product.old_price = data.old_price
     product.image = data.image
