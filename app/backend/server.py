@@ -228,46 +228,17 @@ async def admin_login(
     }
 
 async def get_current_admin(
-
     request: Request,
-
     db: AsyncSession = Depends(get_db)
-
 ):
-
     token = request.cookies.get("admin_token")
 
     if not token:
-
         raise HTTPException(
             status_code=401,
             detail="Unauthorized"
         )
 
-    result = await db.execute(
-
-        select(AdminSession).where(
-            AdminSession.session_token == token
-        )
-
-    )
-
-    session = result.scalar_one_or_none()
-
-    if not session:
-
-        raise HTTPException(
-            status_code=401,
-            detail="Unauthorized"
-        )
-
-    result = await db.execute(
-
-        select(Admin).where(
-            Admin.id == session.admin_id
-        )
-
-    )
     print("COOKIE TOKEN:", token)
 
     result = await db.execute(
@@ -280,7 +251,25 @@ async def get_current_admin(
 
     print("SESSION FOUND:", session)
 
-    admin = result.scalar_one()
+    if not session:
+        raise HTTPException(
+            status_code=401,
+            detail="Unauthorized"
+        )
+
+    result = await db.execute(
+        select(Admin).where(
+            Admin.id == session.admin_id
+        )
+    )
+
+    admin = result.scalar_one_or_none()
+
+    if not admin:
+        raise HTTPException(
+            status_code=401,
+            detail="Unauthorized"
+        )
 
     return admin
 
