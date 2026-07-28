@@ -197,24 +197,30 @@ async def admin_login(
         ).isoformat()
 
     )
+    await db.commit()
+
+    print("TOKEN CREATED:", token)
+
+    result = await db.execute(
+        select(AdminSession).where(
+            AdminSession.session_token == token
+        )
+    )
+
+    print("SESSION AFTER COMMIT:", result.scalar_one_or_none())
 
     db.add(session)
 
     await db.commit()
 
     response.set_cookie(
-
-        "admin_token",
-
-        token,
-
-        httponly=True,
-
-        samesite="lax",
-
-        max_age=60*60*24*30
-
-    )
+    key="admin_token",
+    value=token,
+    httponly=True,
+    secure=True,
+    samesite="none",
+    max_age=60 * 60 * 24 * 30,
+)
 
     return {
         "ok": True,
@@ -262,6 +268,17 @@ async def get_current_admin(
         )
 
     )
+    print("COOKIE TOKEN:", token)
+
+    result = await db.execute(
+        select(AdminSession).where(
+            AdminSession.session_token == token
+        )
+    )
+
+    session = result.scalar_one_or_none()
+
+    print("SESSION FOUND:", session)
 
     admin = result.scalar_one()
 
