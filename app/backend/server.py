@@ -27,6 +27,7 @@ from models import (
     Admin,
     AdminSession,
     Product,
+    Category,
     Review,
     Newsletter,
     ContactMessage,
@@ -37,6 +38,7 @@ from models import (
 # Pydantic Schemas
 from schemas import (
     ProductCreate,
+    CategoryCreate,
     AdminLogin,
     UpdateOrderStatus,
     ReviewSchema,
