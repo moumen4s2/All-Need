@@ -114,7 +114,7 @@ function AppRouter() {
         {/* Admin Login */}
 
         <Route
-          path="/admin/login"
+          path="admin/login"
           element={<Login />}
         />
 
