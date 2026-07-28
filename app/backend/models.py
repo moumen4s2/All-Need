@@ -9,6 +9,7 @@ from sqlalchemy import (
 )
 from pydantic import BaseModel
 from database import Base
+from sqlalchemy.orm import relationship
 
 
 class User(Base):
