@@ -701,35 +701,179 @@ async def create_order(
     user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    order_id = f"AN{uuid.uuid4().hex[:8].upper()}"
-    tracking = f"ANUAE{uuid.uuid4().hex[:10].upper()}"
+    if not order.items:
+        raise HTTPException(
+            status_code=400,
+            detail="Order must contain at least one item"
+        )
+
+    subtotal = 0.0
+    order_items = []
+
+    for item in order.items:
+
+        result = await db.execute(
+            select(Product).where(
+                Product.id == item.product_id
+            )
+        )
+
+        product = result.scalar_one_or_none()
+
+        if not product:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Product not found: {item.product_id}"
+            )
+
+        if not product.in_stock:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Product out of stock: {product.name}"
+            )
+
+
+        item_total = float(product.price) * item.quantity
+
+        subtotal += item_total
+
+        order_items.append({
+            "product": product,
+            "quantity": item.quantity,
+            "price": float(product.price)
+        })
+
+
+    discount = 0.0
+    coupon_code = None
+
+    if order.coupon:
+
+        coupon_code = order.coupon.strip().upper()
+
+        coupon = COUPONS.get(coupon_code)
+
+        if coupon:
+
+            if coupon["type"] == "percent":
+
+                discount = subtotal * (
+                    coupon["value"] / 100
+                )
+
+            elif coupon["type"] == "fixed":
+
+                if coupon_code == "WELCOME50":
+
+                    if subtotal >= 300:
+                        discount = coupon["value"]
+                    else:
+                        discount = 0.0
+
+                else:
+                    discount = coupon["value"]
+
+            discount = min(
+                discount,
+                subtotal
+            )
+
+        else:
+
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid coupon code"
+            )
+
+    shipping = 0.0
+
+
+    total = round(
+        subtotal - discount + shipping,
+        2
+    )
+
+    if total < 0:
+        total = 0.0
+
+
+    order_id = (
+        f"AN{uuid.uuid4().hex[:8].upper()}"
+    )
+
+    tracking = (
+        f"ANUAE{uuid.uuid4().hex[:10].upper()}"
+    )
+
 
     new_order = Order(
         order_id=order_id,
         tracking_number=tracking,
-        status="processing",
-        user_id=user.user_id if user else None,
+
+        # IMPORTANT:
+        # The order is NOT paid yet.
+        status="pending_payment",
+
+        user_id=(
+            user.user_id
+            if user
+            else None
+        ),
+
         customer_name=order.customer_name,
         email=order.email,
         phone=order.phone,
         address=order.address,
         city=order.city,
         emirate=order.emirate,
-        subtotal=order.subtotal,
-        discount=order.discount,
-        shipping=order.shipping,
-        total=order.total,
-        coupon=order.coupon,
-        created_at=now_utc().isoformat(),
+
+        subtotal=round(subtotal, 2),
+        discount=round(discount, 2),
+        shipping=round(shipping, 2),
+        total=round(total, 2),
+
+        coupon=coupon_code,
+
+        created_at=now_utc().isoformat()
     )
 
     db.add(new_order)
+
+
+    for item_data in order_items:
+
+        product = item_data["product"]
+
+        db_item = OrderItem(
+            order_id=order_id,
+
+            product_id=product.id,
+
+            # These values come from PostgreSQL
+            # and NOT from the frontend.
+            name=product.name,
+            price=item_data["price"],
+            quantity=item_data["quantity"],
+            image=product.image
+        )
+
+        db.add(db_item)
+
+    # =====================================================
+    # 8. Save everything
+    # =====================================================
+
     await db.commit()
 
     return {
         "order_id": order_id,
         "tracking_number": tracking,
-        "status": "processing"
+        "status": "pending_payment",
+        "subtotal": round(subtotal, 2),
+        "discount": round(discount, 2),
+        "shipping": round(shipping, 2),
+        "total": round(total, 2),
+        "currency": "AED"
     }
 
 @api_router.get("/orders")
@@ -1077,3 +1221,4 @@ async def startup():
         await conn.run_sync(Base.metadata.create_all)
 
     await create_default_admin()
+    await seed_products(AsyncSession(engine))   

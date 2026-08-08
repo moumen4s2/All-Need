@@ -9,6 +9,10 @@ def now_utc():
     return datetime.now(timezone.utc)
 
 
+# =========================================================
+# PRODUCTS
+# =========================================================
+
 class ProductCreate(BaseModel):
     id: str
     name: str
@@ -25,6 +29,11 @@ class ProductCreate(BaseModel):
     review_count: int = 0
     in_stock: bool = True
 
+
+# =========================================================
+# CATEGORIES
+# =========================================================
+
 class CategoryCreate(BaseModel):
     name: str
     image: str | None = None
@@ -37,6 +46,10 @@ class CategoryResponse(CategoryCreate):
         from_attributes = True
 
 
+# =========================================================
+# ADMIN
+# =========================================================
+
 class AdminLogin(BaseModel):
     email: EmailStr
     password: str
@@ -46,12 +59,24 @@ class UpdateOrderStatus(BaseModel):
     status: str
 
 
+# =========================================================
+# REVIEWS
+# =========================================================
+
 class ReviewSchema(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    id: str = Field(
+        default_factory=lambda: str(uuid.uuid4())
+    )
+
     author: str
+
     rating: int
+
     comment: str
-    date: str = Field(default_factory=lambda: now_utc().isoformat())
+
+    date: str = Field(
+        default_factory=lambda: now_utc().isoformat()
+    )
 
 
 class ReviewCreate(BaseModel):
@@ -60,9 +85,17 @@ class ReviewCreate(BaseModel):
     comment: str
 
 
+# =========================================================
+# NEWSLETTER
+# =========================================================
+
 class NewsletterCreate(BaseModel):
     email: EmailStr
 
+
+# =========================================================
+# CONTACT
+# =========================================================
 
 class ContactMessageCreate(BaseModel):
     name: str
@@ -71,28 +104,86 @@ class ContactMessageCreate(BaseModel):
     message: str
 
 
+# =========================================================
+# COUPONS
+# =========================================================
+
 class CouponCheck(BaseModel):
     code: str
 
 
+# =========================================================
+# ORDER ITEMS
+# =========================================================
+#
+# IMPORTANT:
+#
+# The customer is NOT allowed to tell the backend:
+#
+# - product name
+# - product price
+# - image
+#
+# The backend will get those values directly from PostgreSQL.
+#
+# The customer only sends:
+#
+# product_id
+# quantity
+#
+# This prevents someone from changing:
+#
+# "price": 899
+#
+# to:
+#
+# "price": 1
+#
+# =========================================================
+
 class OrderItemCreate(BaseModel):
     product_id: str
-    name: str
-    price: float
-    quantity: int
-    image: str
+    quantity: int = Field(
+        gt=0,
+        le=100
+    )
 
+
+# =========================================================
+# ORDER CREATE
+# =========================================================
+#
+# IMPORTANT:
+#
+# We intentionally DO NOT accept:
+#
+# subtotal
+# discount
+# shipping
+# total
+#
+# from the frontend.
+#
+# These values will be calculated by the backend.
+#
+# =========================================================
 
 class OrderCreate(BaseModel):
-    items: List[OrderItemCreate]
-    subtotal: float
-    discount: float = 0
-    shipping: float = 0
-    total: float
+
+    items: List[OrderItemCreate] = Field(
+        min_length=1
+    )
+
     coupon: Optional[str] = None
+
     customer_name: str
+
     email: EmailStr
+
     phone: str
+
     address: str
+
     city: str
+
     emirate: str
