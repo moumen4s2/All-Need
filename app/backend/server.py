@@ -8,6 +8,7 @@ import os
 import logging
 import uuid
 import httpx
+import stripe
 
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
@@ -404,98 +405,6 @@ async def logout(
     response.delete_cookie("session_token", path="/")
 
     return {"ok": True}
-
-# ---------------- Catalog ----------------
-CATEGORIES = [
-    {"slug": "swimming", "en": "Baby Swimming", "ar": "سباحة الأطفال", "image": "https://images.unsplash.com/photo-1761523763930-81932b99b459?crop=entropy&cs=srgb&fm=jpg&q=85&w=940"},
-    {"slug": "feeding", "en": "Feeding", "ar": "التغذية", "image": "https://images.pexels.com/photos/20387764/pexels-photo-20387764.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"},
-    {"slug": "travel", "en": "Travel", "ar": "السفر", "image": "https://images.unsplash.com/photo-1636384919179-d936e55c5cca?crop=entropy&cs=srgb&fm=jpg&q=85&w=940"},
-    {"slug": "toys", "en": "Toys", "ar": "ألعاب", "image": "https://images.unsplash.com/photo-1600987608520-29713f8cc23e?crop=entropy&cs=srgb&fm=jpg&q=85&w=940"},
-    {"slug": "safety", "en": "Safety", "ar": "السلامة", "image": "https://images.pexels.com/photos/7491109/pexels-photo-7491109.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"},
-    {"slug": "accessories", "en": "Accessories", "ar": "إكسسوارات", "image": "https://images.pexels.com/photos/12426614/pexels-photo-12426614.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"},
-]
-
-IMG = {
-    "feeding1": "https://images.pexels.com/photos/20387764/pexels-photo-20387764.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-    "feeding2": "https://images.pexels.com/photos/7282619/pexels-photo-7282619.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-    "swim1": "https://images.unsplash.com/photo-1761523763930-81932b99b459?crop=entropy&cs=srgb&fm=jpg&q=85&w=940",
-    "swim2": "https://images.unsplash.com/photo-1599376871063-1b999e42afde?crop=entropy&cs=srgb&fm=jpg&q=85&w=940",
-    "travel1": "https://images.unsplash.com/photo-1559135141-2bea6465fccf?crop=entropy&cs=srgb&fm=jpg&q=85&w=940",
-    "travel2": "https://images.unsplash.com/photo-1636384919179-d936e55c5cca?crop=entropy&cs=srgb&fm=jpg&q=85&w=940",
-    "travel3": "https://images.unsplash.com/photo-1714392512700-4cab9e51710b?crop=entropy&cs=srgb&fm=jpg&q=85&w=940",
-    "toy1": "https://images.unsplash.com/photo-1622403718261-bd0e7dd01216?crop=entropy&cs=srgb&fm=jpg&q=85&w=940",
-    "toy2": "https://images.unsplash.com/photo-1618842676088-c4d48a6a7c9d?crop=entropy&cs=srgb&fm=jpg&q=85&w=940",
-    "toy3": "https://images.unsplash.com/photo-1600987608520-29713f8cc23e?crop=entropy&cs=srgb&fm=jpg&q=85&w=940",
-    "toy4": "https://images.pexels.com/photos/6692935/pexels-photo-6692935.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-    "safety1": "https://images.pexels.com/photos/7491109/pexels-photo-7491109.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-    "safety2": "https://images.pexels.com/photos/6223621/pexels-photo-6223621.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-    "acc1": "https://images.pexels.com/photos/12426614/pexels-photo-12426614.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-    "acc2": "https://images.pexels.com/photos/7691342/pexels-photo-7691342.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-}
-
-
-def p(pid, en, ar, cat, price, old, img, desc_en, desc_ar, best=False, new=False, rating=4.7, rc=42):
-    return {
-        "id": pid, "name": en, "name_ar": ar, "category": cat, "price": price,
-        "old_price": old, "image": img, "description": desc_en, "description_ar": desc_ar,
-        "best_seller": best, "new_arrival": new, "rating": rating, "review_count": rc,
-        "in_stock": True,
-    }
-
-
-SEED_PRODUCTS = [
-    p("swim-01", "Toddler Swim Float Ring", "طوق سباحة للأطفال", "swimming", 89, 120, IMG["swim1"], "Ergonomic float ring with UPF sun canopy for safe pool time.", "طوق عائم مريح مع مظلة واقية من الشمس لأوقات سباحة آمنة.", best=True, rating=4.8, rc=64),
-    p("swim-02", "Baby Neck Float Premium", "عوامة رقبة للأطفال", "swimming", 65, None, IMG["swim2"], "Adjustable neck float for gentle water exercise.", "عوامة رقبة قابلة للتعديل لتمارين مائية لطيفة.", new=True, rating=4.5, rc=28),
-    p("swim-03", "Swim Diaper Set (3 Pack)", "حفاضات سباحة (3 قطع)", "swimming", 55, 70, IMG["swim1"], "Reusable swim diapers with soft, secure fit.", "حفاضات سباحة قابلة لإعادة الاستخدام بمقاس مريح.", rating=4.6, rc=37),
-    p("feed-01", "Anti-Colic Bottle Set", "طقم زجاجات مضاد للمغص", "feeding", 129, 159, IMG["feeding1"], "3-piece anti-colic bottles with natural-flow nipples.", "3 زجاجات مضادة للمغص بحلمات تدفق طبيعي.", best=True, rating=4.9, rc=112),
-    p("feed-02", "Silicone Feeding Set", "طقم تغذية سيليكون", "feeding", 95, None, IMG["feeding2"], "Food-grade silicone bowl, spoon and bib set.", "طقم وعاء وملعقة ومريلة من السيليكون الغذائي.", new=True, rating=4.7, rc=54),
-    p("feed-03", "Insulated Bottle Warmer", "سخان زجاجات معزول", "feeding", 149, 189, IMG["feeding1"], "Portable warmer keeps milk at the perfect temperature.", "سخان محمول يحافظ على الحليب بدرجة الحرارة المثالية.", rating=4.6, rc=41),
-    p("feed-04", "Sippy Cup Duo", "أكواب شرب للأطفال", "feeding", 45, 60, IMG["feeding2"], "Spill-proof training cups with soft spout.", "أكواب تدريب مانعة للانسكاب بفوهة ناعمة.", rating=4.4, rc=33),
-    p("travel-01", "Lightweight Travel Stroller", "عربة سفر خفيفة", "travel", 899, 1099, IMG["travel1"], "One-hand fold, cabin-approved lightweight stroller.", "عربة خفيفة قابلة للطي بيد واحدة ومعتمدة للطائرة.", best=True, rating=4.9, rc=98),
-    p("travel-02", "Convertible Car Seat", "مقعد سيارة قابل للتحويل", "travel", 749, 899, IMG["travel2"], "Rear and forward facing car seat with side protection.", "مقعد سيارة قابل للتحويل مع حماية جانبية.", rating=4.8, rc=76),
-    p("travel-03", "Premium Diaper Backpack", "حقيبة ظهر للحفاضات", "travel", 199, 249, IMG["travel3"], "Insulated pockets, changing mat and stroller straps.", "جيوب معزولة وحصيرة تغيير وأحزمة للعربة.", new=True, rating=4.7, rc=58),
-    p("travel-04", "Baby Travel Cot", "سرير سفر للأطفال", "travel", 429, None, IMG["travel1"], "Fold-flat travel cot with breathable mesh sides.", "سرير سفر قابل للطي بجوانب شبكية قابلة للتنفس.", rating=4.5, rc=29),
-    p("toy-01", "Wooden Stacking Rings", "حلقات خشبية للتكديس", "toys", 79, 99, IMG["toy1"], "Non-toxic wooden stacking toy for motor skills.", "لعبة تكديس خشبية غير سامة لتنمية المهارات الحركية.", best=True, rating=4.8, rc=87),
-    p("toy-02", "Soft Activity Play Gym", "صالة ألعاب ناعمة", "toys", 159, 199, IMG["toy2"], "Padded play gym with hanging sensory toys.", "صالة لعب مبطنة مع ألعاب حسية معلقة.", rating=4.7, rc=63),
-    p("toy-03", "Educational Wooden Train", "قطار خشبي تعليمي", "toys", 119, None, IMG["toy3"], "Colourful wooden train set for imaginative play.", "مجموعة قطار خشبي ملونة للعب الإبداعي.", new=True, rating=4.6, rc=44),
-    p("toy-04", "Sensory Play Kitchen", "مطبخ حسي للعب", "toys", 289, 349, IMG["toy4"], "Interactive play kitchen that grows with your toddler.", "مطبخ تفاعلي ينمو مع طفلك.", rating=4.8, rc=51),
-    p("safety-01", "Extra-Wide Safety Gate", "بوابة أمان عريضة", "safety", 189, 229, IMG["safety1"], "Pressure-fit safety gate for stairs and doorways.", "بوابة أمان بضغط للسلالم والمداخل.", best=True, rating=4.7, rc=72),
-    p("safety-02", "Smart Baby Monitor", "جهاز مراقبة ذكي", "safety", 349, 419, IMG["safety2"], "HD video monitor with night vision and app control.", "جهاز مراقبة بفيديو عالي الدقة ورؤية ليلية وتحكم عبر التطبيق.", new=True, rating=4.8, rc=89),
-    p("safety-03", "Corner Guard Set", "واقيات زوايا", "safety", 39, 55, IMG["safety1"], "Soft corner protectors for furniture edges.", "واقيات زوايا ناعمة لحواف الأثاث.", rating=4.4, rc=26),
-    p("safety-04", "Cabinet Lock Kit", "طقم أقفال خزائن", "safety", 49, None, IMG["safety2"], "Adhesive child-proof locks for cabinets and drawers.", "أقفال لاصقة آمنة للأطفال للخزائن والأدراج.", rating=4.5, rc=31),
-    p("acc-01", "Knitted Baby Booties", "أحذية أطفال محبوكة", "accessories", 45, 59, IMG["acc1"], "Hand-knitted soft booties in premium cotton.", "أحذية ناعمة محبوكة يدويًا من القطن الفاخر.", best=True, rating=4.6, rc=48),
-    p("acc-02", "Organic Cotton Blanket", "بطانية قطن عضوي", "accessories", 89, 109, IMG["acc2"], "GOTS-certified organic muslin swaddle blanket.", "بطانية قماط من الموسلين العضوي معتمدة.", new=True, rating=4.9, rc=67),
-    p("acc-03", "Silicone Teething Set", "طقم تسنين سيليكون", "accessories", 35, 45, IMG["acc1"], "BPA-free teething toys in soothing shapes.", "ألعاب تسنين خالية من BPA بأشكال مهدئة.", rating=4.5, rc=39),
-    p("acc-04", "Baby Grooming Kit", "طقم عناية بالطفل", "accessories", 79, 95, IMG["acc2"], "Complete nail, brush and care kit for newborns.", "طقم كامل للأظافر والفرشاة والعناية بالمواليد.", rating=4.6, rc=34),
-]
-
-COUPONS = {
-    "ALLNEEDS10": {"type": "percent", "value": 10, "desc": "10% off your order"},
-    "BABY20": {"type": "percent", "value": 20, "desc": "20% off your order"},
-    "WELCOME50": {"type": "fixed", "value": 50, "desc": "AED 50 off orders over AED 300"},
-}
-
-
-
-
-
-async def seed_products(db: AsyncSession):
-
-    result = await db.execute(
-        select(func.count(Product.id))
-    )
-
-    count = result.scalar()
-
-    if count == 0:
-
-        for item in SEED_PRODUCTS:
-            product = Product(**item)
-            db.add(product)
-
-        await db.commit()
-
-        logger.info(f"Seeded {len(SEED_PRODUCTS)} products")
 
 
 @api_router.get("/categories")
@@ -1027,6 +936,126 @@ async def create_payment(
         "client_secret": payment_intent.client_secret
     }
 
+@api_router.post("/payments/webhook")
+async def stripe_webhook(
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    payload = await request.body()
+
+    signature = request.headers.get("stripe-signature")
+
+    webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
+
+    if not webhook_secret:
+        raise HTTPException(
+            status_code=500,
+            detail="STRIPE_WEBHOOK_SECRET is not configured"
+        )
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload,
+            signature,
+            webhook_secret
+        )
+
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid webhook payload"
+        )
+
+    except stripe.error.SignatureVerificationError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid webhook signature"
+        )
+
+    event_type = event["type"]
+
+
+    if event_type == "payment_intent.succeeded":
+
+        payment_intent = event["data"]["object"]
+
+        payment_intent_id = payment_intent["id"]
+
+        result = await db.execute(
+            select(Payment).where(
+                Payment.provider_payment_id == payment_intent_id
+            )
+        )
+
+        payment = result.scalar_one_or_none()
+
+        if payment:
+
+            payment.status = "succeeded"
+            payment.updated_at = now_utc().isoformat()
+
+            result = await db.execute(
+                select(Order).where(
+                    Order.order_id == payment.order_id
+                )
+            )
+
+            order = result.scalar_one_or_none()
+
+            if order:
+                order.status = "paid"
+
+            await db.commit()
+
+
+    elif event_type == "payment_intent.payment_failed":
+
+        payment_intent = event["data"]["object"]
+
+        payment_intent_id = payment_intent["id"]
+
+        result = await db.execute(
+            select(Payment).where(
+                Payment.provider_payment_id == payment_intent_id
+            )
+        )
+
+        payment = result.scalar_one_or_none()
+
+        if payment:
+
+            payment.status = "failed"
+            payment.updated_at = now_utc().isoformat()
+
+            await db.commit()
+
+
+    elif event_type == "payment_intent.canceled":
+
+        payment_intent = event["data"]["object"]
+
+        payment_intent_id = payment_intent["id"]
+
+        result = await db.execute(
+            select(Payment).where(
+                Payment.provider_payment_id == payment_intent_id
+            )
+        )
+
+        payment = result.scalar_one_or_none()
+
+        if payment:
+
+            payment.status = "canceled"
+            payment.updated_at = now_utc().isoformat()
+
+            await db.commit()
+
+    return {
+        "received": True
+    }
+
+
 @api_router.get("/admin/dashboard")
 async def admin_dashboard(
     admin: Admin = Depends(get_current_admin),
@@ -1336,4 +1365,3 @@ async def startup():
         await conn.run_sync(Base.metadata.create_all)
 
     await create_default_admin()
-    await seed_products(AsyncSession(engine))   
