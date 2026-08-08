@@ -8,11 +8,6 @@ from pydantic import BaseModel, Field, EmailStr
 def now_utc():
     return datetime.now(timezone.utc)
 
-
-# =========================================================
-# PRODUCTS
-# =========================================================
-
 class ProductCreate(BaseModel):
     id: str
     name: str
@@ -29,11 +24,6 @@ class ProductCreate(BaseModel):
     review_count: int = 0
     in_stock: bool = True
 
-
-# =========================================================
-# CATEGORIES
-# =========================================================
-
 class CategoryCreate(BaseModel):
     name: str
     image: str | None = None
@@ -45,11 +35,6 @@ class CategoryResponse(CategoryCreate):
     class Config:
         from_attributes = True
 
-
-# =========================================================
-# ADMIN
-# =========================================================
-
 class AdminLogin(BaseModel):
     email: EmailStr
     password: str
@@ -57,11 +42,6 @@ class AdminLogin(BaseModel):
 
 class UpdateOrderStatus(BaseModel):
     status: str
-
-
-# =========================================================
-# REVIEWS
-# =========================================================
 
 class ReviewSchema(BaseModel):
     id: str = Field(
@@ -84,18 +64,8 @@ class ReviewCreate(BaseModel):
     rating: int
     comment: str
 
-
-# =========================================================
-# NEWSLETTER
-# =========================================================
-
 class NewsletterCreate(BaseModel):
     email: EmailStr
-
-
-# =========================================================
-# CONTACT
-# =========================================================
 
 class ContactMessageCreate(BaseModel):
     name: str
@@ -103,43 +73,9 @@ class ContactMessageCreate(BaseModel):
     subject: str
     message: str
 
-
-# =========================================================
-# COUPONS
-# =========================================================
-
 class CouponCheck(BaseModel):
     code: str
 
-
-# =========================================================
-# ORDER ITEMS
-# =========================================================
-#
-# IMPORTANT:
-#
-# The customer is NOT allowed to tell the backend:
-#
-# - product name
-# - product price
-# - image
-#
-# The backend will get those values directly from PostgreSQL.
-#
-# The customer only sends:
-#
-# product_id
-# quantity
-#
-# This prevents someone from changing:
-#
-# "price": 899
-#
-# to:
-#
-# "price": 1
-#
-# =========================================================
 
 class OrderItemCreate(BaseModel):
     product_id: str
@@ -148,25 +84,6 @@ class OrderItemCreate(BaseModel):
         le=100
     )
 
-
-# =========================================================
-# ORDER CREATE
-# =========================================================
-#
-# IMPORTANT:
-#
-# We intentionally DO NOT accept:
-#
-# subtotal
-# discount
-# shipping
-# total
-#
-# from the frontend.
-#
-# These values will be calculated by the backend.
-#
-# =========================================================
 
 class OrderCreate(BaseModel):
 
@@ -187,3 +104,23 @@ class OrderCreate(BaseModel):
     city: str
 
     emirate: str
+
+
+class PaymentCreate(BaseModel):
+    order_id: str
+
+
+class PaymentResponse(BaseModel):
+    id: int
+    order_id: str
+    provider: str
+    provider_payment_id: Optional[str] = None
+    amount: float
+    currency: str
+    status: str
+    payment_method: Optional[str] = None
+    created_at: str
+    updated_at: Optional[str] = None
+
+    class Config:
+        from_attributes = True

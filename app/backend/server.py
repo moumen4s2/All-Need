@@ -1,6 +1,8 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
+from stripe_service import get_stripe_client
+from decimal import Decimal
 
 import os
 import logging
@@ -13,14 +15,11 @@ from schemas import now_utc
 from passlib.context import CryptContext
 from typing import Optional
 
-# SQLAlchemy
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# Database
 from database import Base, engine, get_db
 
-# SQLAlchemy Models
 from models import (
     User,
     UserSession,
@@ -33,6 +32,8 @@ from models import (
     ContactMessage,
     Order,
     OrderItem,
+    Payment,
+    Order
 )
 
 # Pydantic Schemas
@@ -48,6 +49,7 @@ from schemas import (
     CouponCheck,
     OrderItemCreate,
     OrderCreate,
+    PaymentCreate
 )
 
 pwd = CryptContext(
@@ -859,9 +861,6 @@ async def create_order(
 
         db.add(db_item)
 
-    # =====================================================
-    # 8. Save everything
-    # =====================================================
 
     await db.commit()
 
@@ -911,6 +910,122 @@ async def track_order(
         raise HTTPException(404, "Order not found")
 
     return order
+
+
+@api_router.post("/payments/create")
+async def create_payment(
+    data: PaymentCreate,
+    db: AsyncSession = Depends(get_db)
+):
+
+    result = await db.execute(
+        select(Order).where(
+            Order.order_id == data.order_id
+        )
+    )
+
+    order = result.scalar_one_or_none()
+
+    if not order:
+        raise HTTPException(
+            status_code=404,
+            detail="Order not found"
+        )
+
+
+    if order.total is None or order.total <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid order total"
+        )
+
+
+
+    if order.status == "paid":
+        raise HTTPException(
+            status_code=400,
+            detail="Order is already paid"
+        )
+
+
+    result = await db.execute(
+        select(Payment).where(
+            Payment.order_id == order.order_id,
+            Payment.status.in_([
+                "pending",
+                "processing",
+                "requires_action"
+            ])
+        )
+    )
+
+    existing_payment = result.scalar_one_or_none()
+
+    if existing_payment:
+        return {
+            "payment_id": existing_payment.id,
+            "order_id": existing_payment.order_id,
+            "amount": float(existing_payment.amount),
+            "currency": existing_payment.currency,
+            "status": existing_payment.status,
+            "provider_payment_id": existing_payment.provider_payment_id
+        }
+
+
+    amount = Decimal(str(order.total)).quantize(
+        Decimal("0.01")
+    )
+
+    amount_fils = int(amount * 100)
+
+
+    stripe_client = get_stripe_client()
+
+
+    try:
+
+        payment_intent = stripe_client.payment_intents.create({
+            "amount": amount_fils,
+            "currency": "aed",
+            "metadata": {
+                "order_id": order.order_id
+            }
+        })
+
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=502,
+            detail=f"Payment provider error: {str(e)}"
+        )
+
+
+    payment = Payment(
+        order_id=order.order_id,
+        provider="stripe",
+        provider_payment_id=payment_intent.id,
+        amount=amount,
+        currency="AED",
+        status="pending",
+        payment_method=None,
+        created_at=now_utc().isoformat()
+    )
+
+    db.add(payment)
+
+    await db.commit()
+    await db.refresh(payment)
+
+
+    return {
+        "payment_id": payment.id,
+        "order_id": payment.order_id,
+        "amount": float(payment.amount),
+        "currency": payment.currency,
+        "status": payment.status,
+        "provider_payment_id": payment.provider_payment_id,
+        "client_secret": payment_intent.client_secret
+    }
 
 @api_router.get("/admin/dashboard")
 async def admin_dashboard(

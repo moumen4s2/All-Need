@@ -11,11 +11,6 @@ from sqlalchemy import (
 from database import Base
 from sqlalchemy.orm import relationship
 
-
-# =========================================================
-# USER
-# =========================================================
-
 class User(Base):
     __tablename__ = "users"
 
@@ -42,11 +37,6 @@ class User(Base):
 
     created_at = Column(String)
 
-
-# =========================================================
-# USER SESSION
-# =========================================================
-
 class UserSession(Base):
     __tablename__ = "user_sessions"
 
@@ -68,10 +58,6 @@ class UserSession(Base):
     created_at = Column(String)
 
 
-# =========================================================
-# ADMIN
-# =========================================================
-
 class Admin(Base):
     __tablename__ = "admins"
 
@@ -89,10 +75,6 @@ class Admin(Base):
 
     name = Column(String)
 
-
-# =========================================================
-# ADMIN SESSION
-# =========================================================
 
 class AdminSession(Base):
     __tablename__ = "admin_sessions"
@@ -113,10 +95,6 @@ class AdminSession(Base):
 
     expires_at = Column(String)
 
-
-# =========================================================
-# PRODUCT
-# =========================================================
 
 class Product(Base):
     __tablename__ = "products"
@@ -179,11 +157,6 @@ class Product(Base):
         default=True
     )
 
-
-# =========================================================
-# CATEGORY
-# =========================================================
-
 class Category(Base):
     __tablename__ = "categories"
 
@@ -210,11 +183,6 @@ class Category(Base):
         cascade="all, delete"
     )
 
-
-# =========================================================
-# REVIEW
-# =========================================================
-
 class Review(Base):
     __tablename__ = "reviews"
 
@@ -236,11 +204,6 @@ class Review(Base):
 
     date = Column(String)
 
-
-# =========================================================
-# NEWSLETTER
-# =========================================================
-
 class Newsletter(Base):
     __tablename__ = "newsletter"
 
@@ -255,11 +218,6 @@ class Newsletter(Base):
     )
 
     date = Column(String)
-
-
-# =========================================================
-# CONTACT MESSAGE
-# =========================================================
 
 class ContactMessage(Base):
     __tablename__ = "contact_messages"
@@ -278,11 +236,6 @@ class ContactMessage(Base):
     message = Column(Text)
 
     date = Column(String)
-
-
-# =========================================================
-# ORDER
-# =========================================================
 
 class Order(Base):
     __tablename__ = "orders"
@@ -330,20 +283,12 @@ class Order(Base):
 
     created_at = Column(String)
 
-    # -----------------------------------------------------
-    # Payments belonging to this order
-    # -----------------------------------------------------
-
     payments = relationship(
         "Payment",
         back_populates="order",
         cascade="all, delete-orphan"
     )
 
-
-# =========================================================
-# ORDER ITEM
-# =========================================================
 
 class OrderItem(Base):
     __tablename__ = "order_items"
@@ -369,25 +314,6 @@ class OrderItem(Base):
     image = Column(Text)
 
 
-# =========================================================
-# PAYMENT
-# =========================================================
-#
-# IMPORTANT SECURITY NOTES:
-#
-# We DO NOT store:
-# - Card number
-# - CVV
-# - Expiry date
-# - Card PIN
-# - Stripe client secret
-#
-# Stripe handles sensitive card information.
-#
-# We only store the payment reference/status needed
-# by AllNeeds to track the transaction.
-# =========================================================
-
 class Payment(Base):
     __tablename__ = "payments"
 
@@ -396,10 +322,6 @@ class Payment(Base):
         primary_key=True,
         index=True
     )
-
-    # -----------------------------------------------------
-    # Internal AllNeeds order
-    # -----------------------------------------------------
 
     order_id = Column(
         String,
@@ -413,24 +335,11 @@ class Payment(Base):
         back_populates="payments"
     )
 
-    # -----------------------------------------------------
-    # Payment provider
-    # -----------------------------------------------------
-
     provider = Column(
         String,
         nullable=False,
         default="stripe"
     )
-
-    # -----------------------------------------------------
-    # Stripe PaymentIntent ID
-    #
-    # Example:
-    # pi_3Nxxxxxxxxxxxxxxxx
-    #
-    # This is NOT card information.
-    # -----------------------------------------------------
 
     provider_payment_id = Column(
         String,
@@ -438,14 +347,6 @@ class Payment(Base):
         nullable=True,
         index=True
     )
-
-    # -----------------------------------------------------
-    # Amount
-    #
-    # Numeric is used instead of Float because this is money.
-    # Example:
-    # 129.50 AED
-    # -----------------------------------------------------
 
     amount = Column(
         Numeric(
@@ -455,33 +356,12 @@ class Payment(Base):
         nullable=False
     )
 
-    # -----------------------------------------------------
-    # Currency
-    #
-    # For AllNeeds:
-    # AED
-    # -----------------------------------------------------
-
     currency = Column(
         String(3),
         nullable=False,
         default="AED"
     )
 
-    # -----------------------------------------------------
-    # Payment status
-    #
-    # Examples:
-    #
-    # pending
-    # processing
-    # requires_action
-    # succeeded
-    # failed
-    # canceled
-    #
-    # The exact status will be updated from Stripe.
-    # -----------------------------------------------------
 
     status = Column(
         String,
@@ -490,27 +370,11 @@ class Payment(Base):
         index=True
     )
 
-    # -----------------------------------------------------
-    # Payment method type
-    #
-    # Examples:
-    #
-    # card
-    # apple_pay
-    # google_pay
-    #
-    # This is only a method identifier.
-    # No sensitive payment information is stored.
-    # -----------------------------------------------------
-
     payment_method = Column(
         String,
         nullable=True
     )
 
-    # -----------------------------------------------------
-    # Timestamps
-    # -----------------------------------------------------
 
     created_at = Column(
         String,
