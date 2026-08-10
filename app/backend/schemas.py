@@ -73,6 +73,107 @@ class ContactMessageCreate(BaseModel):
     subject: str
     message: str
 
+
+class CouponCreate(BaseModel):
+    code: str = Field(
+        min_length=1,
+        max_length=50
+    )
+
+    discount_type: str = Field(
+        pattern="^(percent|fixed)$"
+    )
+
+    value: float = Field(
+        gt=0
+    )
+
+    description: Optional[str] = None
+
+    min_order_amount: Optional[float] = Field(
+        default=None,
+        ge=0
+    )
+
+    max_discount: Optional[float] = Field(
+        default=None,
+        ge=0
+    )
+
+    is_active: bool = True
+
+    usage_limit: Optional[int] = Field(
+        default=None,
+        gt=0
+    )
+
+
+class CouponUpdate(BaseModel):
+    code: Optional[str] = Field(
+        default=None,
+        min_length=1,
+        max_length=50
+    )
+
+    discount_type: Optional[str] = Field(
+        default=None,
+        pattern="^(percent|fixed)$"
+    )
+
+    value: Optional[float] = Field(
+        default=None,
+        gt=0
+    )
+
+    description: Optional[str] = None
+
+    min_order_amount: Optional[float] = Field(
+        default=None,
+        ge=0
+    )
+
+    max_discount: Optional[float] = Field(
+        default=None,
+        ge=0
+    )
+
+    is_active: Optional[bool] = None
+
+    usage_limit: Optional[int] = Field(
+        default=None,
+        gt=0
+    )
+
+
+class CouponResponse(BaseModel):
+    id: int
+
+    code: str
+
+    discount_type: str
+
+    value: float
+
+    description: Optional[str] = None
+
+    min_order_amount: Optional[float] = None
+
+    max_discount: Optional[float] = None
+
+    is_active: bool
+
+    usage_limit: Optional[int] = None
+
+    used_count: int
+
+    created_at: str
+
+    updated_at: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 class CouponCheck(BaseModel):
     code: str
 

@@ -314,6 +314,83 @@ class OrderItem(Base):
     image = Column(Text)
 
 
+class Coupon(Base):
+    __tablename__ = "coupons"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    code = Column(
+        String,
+        unique=True,
+        nullable=False,
+        index=True
+    )
+
+    discount_type = Column(
+        String,
+        nullable=False
+    )
+
+    value = Column(
+        Numeric(
+            precision=12,
+            scale=2
+        ),
+        nullable=False
+    )
+
+    description = Column(
+        String,
+        nullable=True
+    )
+
+    min_order_amount = Column(
+        Numeric(
+            precision=12,
+            scale=2
+        ),
+        nullable=True
+    )
+
+    max_discount = Column(
+        Numeric(
+            precision=12,
+            scale=2
+        ),
+        nullable=True
+    )
+
+    is_active = Column(
+        Boolean,
+        nullable=False,
+        default=True
+    )
+
+    usage_limit = Column(
+        Integer,
+        nullable=True
+    )
+
+    used_count = Column(
+        Integer,
+        nullable=False,
+        default=0
+    )
+
+    created_at = Column(
+        String,
+        nullable=False
+    )
+
+    updated_at = Column(
+        String,
+        nullable=True
+    )
+
 class Payment(Base):
     __tablename__ = "payments"
 

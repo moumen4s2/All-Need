@@ -33,6 +33,7 @@ from models import (
     ContactMessage,
     Order,
     OrderItem,
+    Coupon,
     Payment,
     Order,
     SiteSettings
@@ -49,6 +50,9 @@ from schemas import (
     NewsletterCreate,
     ContactMessageCreate,
     CouponCheck,
+    CouponCreate,
+    CouponUpdate,
+    CouponResponse,
     OrderItemCreate,
     OrderCreate,
     PaymentCreate,
@@ -1294,7 +1298,7 @@ async def delete_category(
         "ok": True
     }
 
-
+# Admin Orders
 
 @api_router.get("/admin/orders")
 async def admin_orders(
@@ -1359,6 +1363,194 @@ async def update_order_status(
     return order
 
 
+# Admin Coupons
+
+
+@api_router.get(
+    "/admin/coupons",
+    response_model=List[CouponResponse]
+)
+async def admin_get_coupons(
+    admin: Admin = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(Coupon)
+        .order_by(Coupon.id.desc())
+    )
+
+    return result.scalars().all()
+
+
+@api_router.post(
+    "/admin/coupons",
+    response_model=CouponResponse
+)
+async def admin_create_coupon(
+    data: CouponCreate,
+    admin: Admin = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    code = data.code.strip().upper()
+
+    # Check duplicate code
+    result = await db.execute(
+        select(Coupon).where(
+            Coupon.code == code
+        )
+    )
+
+    existing = result.scalar_one_or_none()
+
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail="Coupon code already exists"
+        )
+
+    # Validate percentage
+    if data.discount_type == "percent" and data.value > 100:
+        raise HTTPException(
+            status_code=400,
+            detail="Percentage discount cannot exceed 100"
+        )
+
+    now = datetime.now(timezone.utc).isoformat()
+
+    coupon = Coupon(
+        code=code,
+        discount_type=data.discount_type,
+        value=data.value,
+        description=data.description,
+        min_order_amount=data.min_order_amount,
+        max_discount=data.max_discount,
+        is_active=data.is_active,
+        usage_limit=data.usage_limit,
+        used_count=0,
+        created_at=now,
+        updated_at=now
+    )
+
+    db.add(coupon)
+
+    await db.commit()
+    await db.refresh(coupon)
+
+    return coupon
+
+
+@api_router.patch(
+    "/admin/coupons/{coupon_id}",
+    response_model=CouponResponse
+)
+async def admin_update_coupon(
+    coupon_id: int,
+    data: CouponUpdate,
+    admin: Admin = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(Coupon).where(
+            Coupon.id == coupon_id
+        )
+    )
+
+    coupon = result.scalar_one_or_none()
+
+    if not coupon:
+        raise HTTPException(
+            status_code=404,
+            detail="Coupon not found"
+        )
+
+    update_data = data.model_dump(
+        exclude_unset=True
+    )
+
+    if "code" in update_data:
+        update_data["code"] = (
+            update_data["code"]
+            .strip()
+            .upper()
+        )
+
+        duplicate_result = await db.execute(
+            select(Coupon).where(
+                Coupon.code == update_data["code"],
+                Coupon.id != coupon_id
+            )
+        )
+
+        duplicate = duplicate_result.scalar_one_or_none()
+
+        if duplicate:
+            raise HTTPException(
+                status_code=400,
+                detail="Coupon code already exists"
+            )
+
+    discount_type = update_data.get(
+        "discount_type",
+        coupon.discount_type
+    )
+
+    value = update_data.get(
+        "value",
+        coupon.value
+    )
+
+    if discount_type == "percent" and value > 100:
+        raise HTTPException(
+            status_code=400,
+            detail="Percentage discount cannot exceed 100"
+        )
+
+    for field, value in update_data.items():
+        setattr(coupon, field, value)
+
+    coupon.updated_at = (
+        datetime.now(timezone.utc).isoformat()
+    )
+
+    await db.commit()
+    await db.refresh(coupon)
+
+    return coupon
+
+
+@api_router.delete(
+    "/admin/coupons/{coupon_id}"
+)
+async def admin_delete_coupon(
+    coupon_id: int,
+    admin: Admin = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(Coupon).where(
+            Coupon.id == coupon_id
+        )
+    )
+
+    coupon = result.scalar_one_or_none()
+
+    if not coupon:
+        raise HTTPException(
+            status_code=404,
+            detail="Coupon not found"
+        )
+
+    await db.delete(coupon)
+
+    await db.commit()
+
+    return {
+        "success": True,
+        "message": "Coupon deleted successfully"
+    }
+
+# Site Settings
+
 @api_router.get(
     "/site-settings",
     response_model=SiteSettingsResponse
@@ -1397,6 +1589,7 @@ async def get_site_settings(
 
     return settings
 
+# Admin Site Settings
 
 @api_router.get(
     "/admin/site-settings",
