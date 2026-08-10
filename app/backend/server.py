@@ -606,11 +606,58 @@ async def contact(
 
 
 @api_router.post("/coupons/validate")
-async def validate_coupon(data: CouponCheck):
+async def validate_coupon(
+    data: CouponCheck,
+    db: AsyncSession = Depends(get_db)
+):
     code = data.code.strip().upper()
-    if code in COUPONS:
-        return {"valid": True, "code": code, **COUPONS[code]}
-    raise HTTPException(status_code=404, detail="Invalid coupon code")
+
+    result = await db.execute(
+        select(Coupon).where(
+            Coupon.code == code
+        )
+    )
+
+    coupon = result.scalar_one_or_none()
+
+    if not coupon:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid coupon code"
+        )
+
+    if not coupon.is_active:
+        raise HTTPException(
+            status_code=400,
+            detail="This coupon is inactive"
+        )
+
+    if (
+        coupon.usage_limit is not None
+        and coupon.used_count >= coupon.usage_limit
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="This coupon has reached its usage limit"
+        )
+
+    return {
+        "valid": True,
+        "code": coupon.code,
+        "discount_type": coupon.discount_type,
+        "value": float(coupon.value),
+        "description": coupon.description,
+        "min_order_amount": (
+            float(coupon.min_order_amount)
+            if coupon.min_order_amount is not None
+            else None
+        ),
+        "max_discount": (
+            float(coupon.max_discount)
+            if coupon.max_discount is not None
+            else None
+        )
+    }
 
 
 @api_router.post("/orders")
@@ -650,7 +697,6 @@ async def create_order(
                 detail=f"Product out of stock: {product.name}"
             )
 
-
         item_total = float(product.price) * item.quantity
 
         subtotal += item_total
@@ -661,50 +707,90 @@ async def create_order(
             "price": float(product.price)
         })
 
-
     discount = 0.0
     coupon_code = None
+    coupon = None
 
     if order.coupon:
 
         coupon_code = order.coupon.strip().upper()
 
-        coupon = COUPONS.get(coupon_code)
-
-        if coupon:
-
-            if coupon["type"] == "percent":
-
-                discount = subtotal * (
-                    coupon["value"] / 100
-                )
-
-            elif coupon["type"] == "fixed":
-
-                if coupon_code == "WELCOME50":
-
-                    if subtotal >= 300:
-                        discount = coupon["value"]
-                    else:
-                        discount = 0.0
-
-                else:
-                    discount = coupon["value"]
-
-            discount = min(
-                discount,
-                subtotal
+        result = await db.execute(
+            select(Coupon).where(
+                Coupon.code == coupon_code
             )
+        )
 
-        else:
+        coupon = result.scalar_one_or_none()
 
+        if not coupon:
             raise HTTPException(
                 status_code=400,
                 detail="Invalid coupon code"
             )
 
-    shipping = 0.0
+        if not coupon.is_active:
+            raise HTTPException(
+                status_code=400,
+                detail="This coupon is inactive"
+            )
 
+        if (
+            coupon.usage_limit is not None
+            and coupon.used_count >= coupon.usage_limit
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="This coupon has reached its usage limit"
+            )
+
+        if (
+            coupon.min_order_amount is not None
+            and subtotal < float(coupon.min_order_amount)
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Minimum order amount for this coupon is "
+                    f"AED {float(coupon.min_order_amount):.2f}"
+                )
+            )
+
+        if coupon.discount_type == "percent":
+
+            discount = subtotal * (
+                float(coupon.value) / 100
+            )
+
+        elif coupon.discount_type == "fixed":
+
+            discount = float(coupon.value)
+
+        else:
+
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid coupon discount type"
+            )
+
+        if coupon.max_discount is not None:
+
+            discount = min(
+                discount,
+                float(coupon.max_discount)
+            )
+
+        discount = min(
+            discount,
+            subtotal
+        )
+
+        discount = round(
+            max(discount, 0.0),
+            2
+        )
+
+    shipping = 0.0
 
     total = round(
         subtotal - discount + shipping,
@@ -713,7 +799,6 @@ async def create_order(
 
     if total < 0:
         total = 0.0
-
 
     order_id = (
         f"AN{uuid.uuid4().hex[:8].upper()}"
@@ -728,8 +813,7 @@ async def create_order(
         order_id=order_id,
         tracking_number=tracking,
 
-        # IMPORTANT:
-        # The order is NOT paid yet.
+        # Order is not paid yet
         status="pending_payment",
 
         user_id=(
@@ -767,8 +851,8 @@ async def create_order(
 
             product_id=product.id,
 
-            # These values come from PostgreSQL
-            # and NOT from the frontend.
+            # Values come from PostgreSQL
+            # NOT from the frontend
             name=product.name,
             price=item_data["price"],
             quantity=item_data["quantity"],
@@ -776,7 +860,6 @@ async def create_order(
         )
 
         db.add(db_item)
-
 
     await db.commit()
 
@@ -998,6 +1081,10 @@ async def stripe_webhook(
 
         if payment:
 
+            was_already_succeeded = (
+                payment.status == "succeeded"
+            )
+
             payment.status = "succeeded"
             payment.updated_at = now_utc().isoformat()
 
@@ -1010,10 +1097,43 @@ async def stripe_webhook(
             order = result.scalar_one_or_none()
 
             if order:
+
                 order.status = "paid"
 
-            await db.commit()
+                if (
+                    not was_already_succeeded
+                    and order.coupon
+                ):
 
+                    coupon_code = (
+                        order.coupon.strip().upper()
+                    )
+
+                    result = await db.execute(
+                        select(Coupon).where(
+                            Coupon.code == coupon_code
+                        )
+                    )
+
+                    coupon = (
+                        result.scalar_one_or_none()
+                    )
+
+                    if coupon:
+
+                        if (
+                            coupon.usage_limit is None
+                            or coupon.used_count
+                            < coupon.usage_limit
+                        ):
+
+                            coupon.used_count += 1
+
+                            coupon.updated_at = (
+                                now_utc().isoformat()
+                            )
+
+            await db.commit()
 
     elif event_type == "payment_intent.payment_failed":
 
@@ -1032,10 +1152,12 @@ async def stripe_webhook(
         if payment:
 
             payment.status = "failed"
-            payment.updated_at = now_utc().isoformat()
+
+            payment.updated_at = (
+                now_utc().isoformat()
+            )
 
             await db.commit()
-
 
     elif event_type == "payment_intent.canceled":
 
@@ -1054,7 +1176,10 @@ async def stripe_webhook(
         if payment:
 
             payment.status = "canceled"
-            payment.updated_at = now_utc().isoformat()
+
+            payment.updated_at = (
+                now_utc().isoformat()
+            )
 
             await db.commit()
 
