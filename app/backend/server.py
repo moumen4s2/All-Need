@@ -1434,7 +1434,7 @@ async def admin_get_site_settings(
     return settings
 
 
-@api_router.put(
+@api_router.patch(
     "/admin/site-settings",
     response_model=SiteSettingsResponse
 )
@@ -1453,8 +1453,19 @@ async def update_site_settings(
 
     if not settings:
         settings = SiteSettings(
-            store_name="AllNeeds"
+            store_name="AllNeeds",
+            description="Premium baby products, thoughtfully designed for the modern UAE family.",
+            description_ar="منتجات أطفال مميزة مصممة بعناية للعائلات العصرية في الإمارات.",
+            address="Dubai, United Arab Emirates",
+            phone="+971 4 000 0000",
+            email="hello@allneeds.ae",
+            show_visa=True,
+            show_mastercard=True,
+            show_apple_pay=True,
+            show_google_pay=True,
+            copyright_text="© 2026 AllNeeds. All rights reserved."
         )
+
         db.add(settings)
 
     update_data = data.model_dump(
@@ -1465,6 +1476,7 @@ async def update_site_settings(
         setattr(settings, field, value)
 
     await db.commit()
+
     await db.refresh(settings)
 
     return settings

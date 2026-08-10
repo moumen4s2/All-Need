@@ -142,12 +142,6 @@ class SiteSettingsUpdate(BaseModel):
     phone: Optional[str] = None
     email: Optional[EmailStr] = None
 
-    about_url: Optional[str] = None
-    faq_url: Optional[str] = None
-    privacy_url: Optional[str] = None
-    return_policy_url: Optional[str] = None
-    terms_url: Optional[str] = None
-
     show_visa: Optional[bool] = None
     show_mastercard: Optional[bool] = None
     show_apple_pay: Optional[bool] = None
@@ -174,17 +168,11 @@ class SiteSettingsResponse(BaseModel):
     phone: Optional[str] = None
     email: Optional[EmailStr] = None
 
-    about_url: Optional[str] = None
-    faq_url: Optional[str] = None
-    privacy_url: Optional[str] = None
-    return_policy_url: Optional[str] = None
-    terms_url: Optional[str] = None
-
     show_visa: bool
     show_mastercard: bool
     show_apple_pay: bool
     show_google_pay: bool
-    
+
     copyright_text: Optional[str] = None
 
     class Config:

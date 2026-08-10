@@ -1,37 +1,31 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 
+const DEFAULT_SETTINGS = {
+    store_name: "AllNeeds",
+    logo: "",
+    description: "",
+    description_ar: "",
+
+    instagram_url: "",
+    facebook_url: "",
+    twitter_url: "",
+
+    address: "Dubai, United Arab Emirates",
+    address_ar: "",
+    phone: "+971 4 000 0000",
+    email: "hello@allneeds.ae",
+
+    show_visa: true,
+    show_mastercard: true,
+    show_apple_pay: true,
+    show_google_pay: true,
+
+    copyright_text: ""
+};
+
 export default function Settings() {
-
-    const [form, setForm] = useState({
-        store_name: "",
-        logo: "",
-
-        description: "",
-        description_ar: "",
-
-        instagram_url: "",
-        facebook_url: "",
-        twitter_url: "",
-
-        address: "",
-        address_ar: "",
-        phone: "",
-        email: "",
-
-        about_url: "",
-        faq_url: "",
-        privacy_url: "",
-        return_policy_url: "",
-        terms_url: "",
-
-        show_visa: true,
-        show_mastercard: true,
-        show_apple_pay: true,
-        show_google_pay: true,
-
-        copyright_text: ""
-    });
+    const [form, setForm] = useState(DEFAULT_SETTINGS);
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -41,63 +35,86 @@ export default function Settings() {
     }, []);
 
     async function loadSettings() {
-
         try {
-
             const res = await api.get("/admin/site-settings");
 
-            setForm({
-                store_name: res.data.store_name ?? "",
-                logo: res.data.logo ?? "",
+            const data = res.data || {};
 
-                description: res.data.description ?? "",
-                description_ar: res.data.description_ar ?? "",
+            setForm(prev => ({
+                ...prev,
 
-                instagram_url: res.data.instagram_url ?? "",
-                facebook_url: res.data.facebook_url ?? "",
-                twitter_url: res.data.twitter_url ?? "",
+                store_name:
+                    data.store_name ?? prev.store_name,
 
-                address: res.data.address ?? "",
-                address_ar: res.data.address_ar ?? "",
-                phone: res.data.phone ?? "",
-                email: res.data.email ?? "",
+                logo:
+                    data.logo ?? prev.logo,
 
-                about_url: res.data.about_url ?? "",
-                faq_url: res.data.faq_url ?? "",
-                privacy_url: res.data.privacy_url ?? "",
-                return_policy_url: res.data.return_policy_url ?? "",
-                terms_url: res.data.terms_url ?? "",
+                description:
+                    data.description ?? prev.description,
 
-                show_visa: res.data.show_visa ?? true,
-                show_mastercard: res.data.show_mastercard ?? true,
-                show_apple_pay: res.data.show_apple_pay ?? true,
-                show_google_pay: res.data.show_google_pay ?? true,
+                description_ar:
+                    data.description_ar ?? prev.description_ar,
 
-                copyright_text: res.data.copyright_text ?? ""
-            });
+                instagram_url:
+                    data.instagram_url ?? prev.instagram_url,
+
+                facebook_url:
+                    data.facebook_url ?? prev.facebook_url,
+
+                twitter_url:
+                    data.twitter_url ?? prev.twitter_url,
+
+                address:
+                    data.address ?? prev.address,
+
+                address_ar:
+                    data.address_ar ?? prev.address_ar,
+
+                phone:
+                    data.phone ?? prev.phone,
+
+                email:
+                    data.email ?? prev.email,
+
+                show_visa:
+                    data.show_visa ?? prev.show_visa,
+
+                show_mastercard:
+                    data.show_mastercard ?? prev.show_mastercard,
+
+                show_apple_pay:
+                    data.show_apple_pay ?? prev.show_apple_pay,
+
+                show_google_pay:
+                    data.show_google_pay ?? prev.show_google_pay,
+
+                copyright_text:
+                    data.copyright_text ?? prev.copyright_text
+            }));
 
         } catch (err) {
-
             console.error(err);
 
             alert(
                 err.response?.data?.detail ||
                 "Failed to load settings."
             );
-
         } finally {
-
             setLoading(false);
-
         }
     }
 
     function update(e) {
-
-        const { name, value, type, checked } = e.target;
+        const {
+            name,
+            value,
+            type,
+            checked
+        } = e.target;
 
         setForm(prev => ({
             ...prev,
+
             [name]:
                 type === "checkbox"
                     ? checked
@@ -106,52 +123,53 @@ export default function Settings() {
     }
 
     async function save(e) {
-
         e.preventDefault();
 
         setSaving(true);
 
         try {
+            /*
+             * IMPORTANT:
+             *
+             * We send the complete current form.
+             * Since form was first populated from the
+             * existing database values, changing one
+             * field will not erase the others.
+             */
 
-            await api.put(
+            await api.patch(
                 "/admin/site-settings",
                 form
             );
 
-            alert("Settings saved successfully.");
+            alert(
+                "Settings saved successfully."
+            );
 
         } catch (err) {
-
             console.error(err);
 
             alert(
                 err.response?.data?.detail ||
                 "Failed to save settings."
             );
-
         } finally {
-
             setSaving(false);
-
         }
     }
 
     if (loading) {
-
         return (
             <div className="p-6">
                 Loading settings...
             </div>
         );
-
     }
 
     return (
-
         <div className="max-w-4xl">
 
             <div className="mb-8">
-
                 <h1 className="text-4xl font-bold">
                     Settings
                 </h1>
@@ -159,7 +177,6 @@ export default function Settings() {
                 <p className="text-gray-500 mt-2">
                     Manage your store information and footer.
                 </p>
-
             </div>
 
             <form
@@ -167,7 +184,9 @@ export default function Settings() {
                 className="space-y-8"
             >
 
-                {/* BRAND */}
+                {/* =====================================================
+                    BRAND
+                ====================================================== */}
 
                 <section className="bg-white rounded-xl shadow p-6">
 
@@ -177,13 +196,20 @@ export default function Settings() {
 
                     <div className="space-y-4">
 
-                        <input
-                            name="store_name"
-                            value={form.store_name}
-                            placeholder="Store Name"
-                            onChange={update}
-                            className="w-full border rounded-lg p-3"
-                        />
+                        <div>
+                            <label className="block text-sm font-medium mb-2">
+                                Store Name
+                            </label>
+
+                            <input
+                                name="store_name"
+                                value={form.store_name}
+                                placeholder="Store Name"
+                                onChange={update}
+                                className="w-full border rounded-lg p-3"
+                            />
+                        </div>
+
 
                         <div>
 
@@ -201,40 +227,76 @@ export default function Settings() {
 
                         </div>
 
+
                         {form.logo && (
+                            <div>
 
-                            <img
-                                src={form.logo}
-                                alt="Logo preview"
-                                className="h-20 object-contain border rounded-lg p-2"
-                            />
+                                <p className="text-sm text-gray-500 mb-2">
+                                    Logo Preview
+                                </p>
 
+                                <div className="border rounded-lg p-4 bg-gray-50">
+
+                                    <img
+                                        src={form.logo}
+                                        alt="Logo preview"
+                                        className="h-20 w-auto object-contain"
+                                        onError={(e) => {
+                                            e.currentTarget.style.display =
+                                                "none";
+                                        }}
+                                    />
+
+                                </div>
+
+                            </div>
                         )}
 
-                        <textarea
-                            name="description"
-                            value={form.description}
-                            placeholder="Store Description"
-                            onChange={update}
-                            rows={4}
-                            className="w-full border rounded-lg p-3"
-                        />
 
-                        <textarea
-                            name="description_ar"
-                            value={form.description_ar}
-                            placeholder="Arabic Store Description"
-                            onChange={update}
-                            rows={4}
-                            className="w-full border rounded-lg p-3"
-                        />
+                        <div>
+
+                            <label className="block text-sm font-medium mb-2">
+                                Store Description
+                            </label>
+
+                            <textarea
+                                name="description"
+                                value={form.description}
+                                placeholder="Store Description"
+                                onChange={update}
+                                rows={4}
+                                className="w-full border rounded-lg p-3"
+                            />
+
+                        </div>
+
+
+                        <div>
+
+                            <label className="block text-sm font-medium mb-2">
+                                Arabic Store Description
+                            </label>
+
+                            <textarea
+                                name="description_ar"
+                                value={form.description_ar}
+                                placeholder="Arabic Store Description"
+                                onChange={update}
+                                rows={4}
+                                dir="rtl"
+                                className="w-full border rounded-lg p-3"
+                            />
+
+                        </div>
 
                     </div>
 
                 </section>
 
 
-                {/* SOCIAL MEDIA */}
+                {/* =====================================================
+                    SOCIAL MEDIA
+                ====================================================== */}
 
                 <section className="bg-white rounded-xl shadow p-6">
 
@@ -244,36 +306,64 @@ export default function Settings() {
 
                     <div className="space-y-4">
 
-                        <input
-                            name="instagram_url"
-                            value={form.instagram_url}
-                            placeholder="Instagram URL"
-                            onChange={update}
-                            className="w-full border rounded-lg p-3"
-                        />
+                        <div>
 
-                        <input
-                            name="facebook_url"
-                            value={form.facebook_url}
-                            placeholder="Facebook URL"
-                            onChange={update}
-                            className="w-full border rounded-lg p-3"
-                        />
+                            <label className="block text-sm font-medium mb-2">
+                                Instagram URL
+                            </label>
 
-                        <input
-                            name="twitter_url"
-                            value={form.twitter_url}
-                            placeholder="Twitter / X URL"
-                            onChange={update}
-                            className="w-full border rounded-lg p-3"
-                        />
+                            <input
+                                name="instagram_url"
+                                value={form.instagram_url}
+                                placeholder="https://instagram.com/..."
+                                onChange={update}
+                                className="w-full border rounded-lg p-3"
+                            />
+
+                        </div>
+
+
+                        <div>
+
+                            <label className="block text-sm font-medium mb-2">
+                                Facebook URL
+                            </label>
+
+                            <input
+                                name="facebook_url"
+                                value={form.facebook_url}
+                                placeholder="https://facebook.com/..."
+                                onChange={update}
+                                className="w-full border rounded-lg p-3"
+                            />
+
+                        </div>
+
+
+                        <div>
+
+                            <label className="block text-sm font-medium mb-2">
+                                Twitter / X URL
+                            </label>
+
+                            <input
+                                name="twitter_url"
+                                value={form.twitter_url}
+                                placeholder="https://x.com/..."
+                                onChange={update}
+                                className="w-full border rounded-lg p-3"
+                            />
+
+                        </div>
 
                     </div>
 
                 </section>
 
 
-                {/* CONTACT */}
+                {/* =====================================================
+                    CONTACT
+                ====================================================== */}
 
                 <section className="bg-white rounded-xl shadow p-6">
 
@@ -283,100 +373,83 @@ export default function Settings() {
 
                     <div className="space-y-4">
 
-                        <input
-                            name="address"
-                            value={form.address}
-                            placeholder="Address"
-                            onChange={update}
-                            className="w-full border rounded-lg p-3"
-                        />
+                        <div>
 
-                        <input
-                            name="address_ar"
-                            value={form.address_ar}
-                            placeholder="Arabic Address"
-                            onChange={update}
-                            className="w-full border rounded-lg p-3"
-                        />
+                            <label className="block text-sm font-medium mb-2">
+                                Address
+                            </label>
 
-                        <input
-                            name="phone"
-                            value={form.phone}
-                            placeholder="Phone Number"
-                            onChange={update}
-                            className="w-full border rounded-lg p-3"
-                        />
+                            <input
+                                name="address"
+                                value={form.address}
+                                placeholder="Address"
+                                onChange={update}
+                                className="w-full border rounded-lg p-3"
+                            />
 
-                        <input
-                            type="email"
-                            name="email"
-                            value={form.email}
-                            placeholder="Email"
-                            onChange={update}
-                            className="w-full border rounded-lg p-3"
-                        />
-
-                    </div>
-
-                </section>
+                        </div>
 
 
-                {/* FOOTER LINKS */}
+                        <div>
 
-                <section className="bg-white rounded-xl shadow p-6">
+                            <label className="block text-sm font-medium mb-2">
+                                Arabic Address
+                            </label>
 
-                    <h2 className="text-xl font-semibold mb-6">
-                        Footer Links
-                    </h2>
+                            <input
+                                name="address_ar"
+                                value={form.address_ar}
+                                placeholder="Arabic Address"
+                                onChange={update}
+                                dir="rtl"
+                                className="w-full border rounded-lg p-3"
+                            />
 
-                    <div className="space-y-4">
+                        </div>
 
-                        <input
-                            name="about_url"
-                            value={form.about_url}
-                            placeholder="About URL"
-                            onChange={update}
-                            className="w-full border rounded-lg p-3"
-                        />
 
-                        <input
-                            name="faq_url"
-                            value={form.faq_url}
-                            placeholder="FAQ URL"
-                            onChange={update}
-                            className="w-full border rounded-lg p-3"
-                        />
+                        <div>
 
-                        <input
-                            name="privacy_url"
-                            value={form.privacy_url}
-                            placeholder="Privacy Policy URL"
-                            onChange={update}
-                            className="w-full border rounded-lg p-3"
-                        />
+                            <label className="block text-sm font-medium mb-2">
+                                Phone Number
+                            </label>
 
-                        <input
-                            name="return_policy_url"
-                            value={form.return_policy_url}
-                            placeholder="Return Policy URL"
-                            onChange={update}
-                            className="w-full border rounded-lg p-3"
-                        />
+                            <input
+                                name="phone"
+                                value={form.phone}
+                                placeholder="+971 ..."
+                                onChange={update}
+                                className="w-full border rounded-lg p-3"
+                            />
 
-                        <input
-                            name="terms_url"
-                            value={form.terms_url}
-                            placeholder="Terms & Conditions URL"
-                            onChange={update}
-                            className="w-full border rounded-lg p-3"
-                        />
+                        </div>
+
+
+                        <div>
+
+                            <label className="block text-sm font-medium mb-2">
+                                Email
+                            </label>
+
+                            <input
+                                type="email"
+                                name="email"
+                                value={form.email}
+                                placeholder="Email"
+                                onChange={update}
+                                className="w-full border rounded-lg p-3"
+                            />
+
+                        </div>
 
                     </div>
 
                 </section>
 
 
-                {/* PAYMENT METHODS */}
+                {/* =====================================================
+                    PAYMENT METHODS
+                ====================================================== */}
 
                 <section className="bg-white rounded-xl shadow p-6">
 
@@ -395,9 +468,10 @@ export default function Settings() {
                                 onChange={update}
                             />
 
-                            Visa
+                            <span>Visa</span>
 
                         </label>
+
 
                         <label className="flex items-center gap-3">
 
@@ -408,9 +482,10 @@ export default function Settings() {
                                 onChange={update}
                             />
 
-                            Mastercard
+                            <span>Mastercard</span>
 
                         </label>
+
 
                         <label className="flex items-center gap-3">
 
@@ -421,9 +496,10 @@ export default function Settings() {
                                 onChange={update}
                             />
 
-                            Apple Pay
+                            <span>Apple Pay</span>
 
                         </label>
+
 
                         <label className="flex items-center gap-3">
 
@@ -434,7 +510,7 @@ export default function Settings() {
                                 onChange={update}
                             />
 
-                            Google Pay
+                            <span>Google Pay</span>
 
                         </label>
 
@@ -443,7 +519,9 @@ export default function Settings() {
                 </section>
 
 
-                {/* COPYRIGHT */}
+                {/* =====================================================
+                    COPYRIGHT
+                ====================================================== */}
 
                 <section className="bg-white rounded-xl shadow p-6">
 
@@ -454,26 +532,36 @@ export default function Settings() {
                     <input
                         name="copyright_text"
                         value={form.copyright_text}
-                        placeholder="Copyright text"
+                        placeholder="Leave empty to use automatic copyright"
                         onChange={update}
                         className="w-full border rounded-lg p-3"
                     />
 
+                    <p className="text-sm text-gray-500 mt-2">
+                        If empty, the website will automatically show the
+                        current year and store name.
+                    </p>
+
                 </section>
 
 
+                {/* =====================================================
+                    SAVE
+                ====================================================== */}
 
                 <div className="flex justify-end">
 
                     <button
                         type="submit"
                         disabled={saving}
-                        className="bg-pink-600 hover:bg-pink-700 disabled:opacity-50 text-white px-8 py-3 rounded-lg"
+                        className="bg-pink-600 hover:bg-pink-700 disabled:opacity-50 text-white px-8 py-3 rounded-lg font-semibold"
                     >
+
                         {saving
                             ? "Saving..."
                             : "Save Settings"
                         }
+
                     </button>
 
                 </div>
@@ -481,6 +569,5 @@ export default function Settings() {
             </form>
 
         </div>
-
     );
 }
