@@ -14,7 +14,7 @@ from pathlib import Path
 from datetime import datetime, timezone, timedelta
 from schemas import now_utc
 from passlib.context import CryptContext
-from typing import Optional
+from typing import Optional,List
 
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
