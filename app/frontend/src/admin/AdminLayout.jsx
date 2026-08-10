@@ -65,6 +65,13 @@ export default function AdminLayout() {
                         Coupons
                     </NavLink>
 
+                    <NavLink
+                        to="/admin/settings"
+                        className="px-4 py-3 rounded-lg hover:bg-slate-700"
+                    >
+                        Settings
+                    </NavLink>
+
                 </nav>
 
                 <button

@@ -36,6 +36,7 @@ import ProductForm from "./admin/ProductForm";
 import Orders from "./admin/Orders";
 import OrderDetails from "./admin/OrderDetails";
 import Categories from "./admin/Categories";
+import Settings from "./admin/Settings";
 import Login from "./admin/Login";
 import AdminRoute from "./admin/AdminRoute";
 
@@ -162,6 +163,11 @@ function AppRouter() {
           <Route
             path="categories"
             element={<Categories />}
+          />
+
+          <Route
+            path="settings"
+            element={<Settings />}
           />
 
         </Route>

@@ -1354,9 +1354,6 @@ async def update_order_status(
 
     return order
 
-# =========================================================
-# SITE SETTINGS
-# =========================================================
 
 @api_router.get(
     "/site-settings",
@@ -1376,7 +1373,6 @@ async def get_site_settings(
     if settings:
         return settings
 
-    # Create default settings if none exist
     settings = SiteSettings(
         store_name="AllNeeds",
         description="Premium baby products, thoughtfully designed for the modern UAE family.",
