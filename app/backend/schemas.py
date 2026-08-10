@@ -124,3 +124,68 @@ class PaymentResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class SiteSettingsUpdate(BaseModel):
+    store_name: Optional[str] = None
+    logo: Optional[str] = None
+
+    description: Optional[str] = None
+    description_ar: Optional[str] = None
+
+    instagram_url: Optional[str] = None
+    facebook_url: Optional[str] = None
+    twitter_url: Optional[str] = None
+
+    address: Optional[str] = None
+    address_ar: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[EmailStr] = None
+
+    about_url: Optional[str] = None
+    faq_url: Optional[str] = None
+    privacy_url: Optional[str] = None
+    return_policy_url: Optional[str] = None
+    terms_url: Optional[str] = None
+
+    show_visa: Optional[bool] = None
+    show_mastercard: Optional[bool] = None
+    show_apple_pay: Optional[bool] = None
+    show_google_pay: Optional[bool] = None
+
+    copyright_text: Optional[str] = None
+
+
+class SiteSettingsResponse(BaseModel):
+    id: int
+
+    store_name: str
+    logo: Optional[str] = None
+
+    description: Optional[str] = None
+    description_ar: Optional[str] = None
+
+    instagram_url: Optional[str] = None
+    facebook_url: Optional[str] = None
+    twitter_url: Optional[str] = None
+
+    address: Optional[str] = None
+    address_ar: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[EmailStr] = None
+
+    about_url: Optional[str] = None
+    faq_url: Optional[str] = None
+    privacy_url: Optional[str] = None
+    return_policy_url: Optional[str] = None
+    terms_url: Optional[str] = None
+
+    show_visa: bool
+    show_mastercard: bool
+    show_apple_pay: bool
+    show_google_pay: bool
+    
+    copyright_text: Optional[str] = None
+
+    class Config:
+        from_attributes = True

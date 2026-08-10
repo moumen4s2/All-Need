@@ -34,7 +34,8 @@ from models import (
     Order,
     OrderItem,
     Payment,
-    Order
+    Order,
+    SiteSettings
 )
 
 # Pydantic Schemas
@@ -50,7 +51,9 @@ from schemas import (
     CouponCheck,
     OrderItemCreate,
     OrderCreate,
-    PaymentCreate
+    PaymentCreate,
+    SiteSettingsResponse,
+    SiteSettingsUpdate
 )
 
 pwd = CryptContext(
@@ -1350,6 +1353,125 @@ async def update_order_status(
     await db.refresh(order)
 
     return order
+
+# =========================================================
+# SITE SETTINGS
+# =========================================================
+
+@api_router.get(
+    "/site-settings",
+    response_model=SiteSettingsResponse
+)
+async def get_site_settings(
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(SiteSettings)
+        .order_by(SiteSettings.id)
+        .limit(1)
+    )
+
+    settings = result.scalar_one_or_none()
+
+    if settings:
+        return settings
+
+    # Create default settings if none exist
+    settings = SiteSettings(
+        store_name="AllNeeds",
+        description="Premium baby products, thoughtfully designed for the modern UAE family.",
+        description_ar="منتجات أطفال مميزة مصممة بعناية للعائلات العصرية في الإمارات.",
+        address="Dubai, United Arab Emirates",
+        phone="+971 4 000 0000",
+        email="hello@allneeds.ae",
+        show_visa=True,
+        show_mastercard=True,
+        show_apple_pay=True,
+        show_google_pay=True,
+        copyright_text="© 2026 AllNeeds. All rights reserved."
+    )
+
+    db.add(settings)
+    await db.commit()
+    await db.refresh(settings)
+
+    return settings
+
+
+@api_router.get(
+    "/admin/site-settings",
+    response_model=SiteSettingsResponse
+)
+async def admin_get_site_settings(
+    admin: Admin = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(SiteSettings)
+        .order_by(SiteSettings.id)
+        .limit(1)
+    )
+
+    settings = result.scalar_one_or_none()
+
+    if settings:
+        return settings
+
+    settings = SiteSettings(
+        store_name="AllNeeds",
+        description="Premium baby products, thoughtfully designed for the modern UAE family.",
+        description_ar="منتجات أطفال مميزة مصممة بعناية للعائلات العصرية في الإمارات.",
+        address="Dubai, United Arab Emirates",
+        phone="+971 4 000 0000",
+        email="hello@allneeds.ae",
+        show_visa=True,
+        show_mastercard=True,
+        show_apple_pay=True,
+        show_google_pay=True,
+        copyright_text="© 2026 AllNeeds. All rights reserved."
+    )
+
+    db.add(settings)
+    await db.commit()
+    await db.refresh(settings)
+
+    return settings
+
+
+@api_router.put(
+    "/admin/site-settings",
+    response_model=SiteSettingsResponse
+)
+async def update_site_settings(
+    data: SiteSettingsUpdate,
+    admin: Admin = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(SiteSettings)
+        .order_by(SiteSettings.id)
+        .limit(1)
+    )
+
+    settings = result.scalar_one_or_none()
+
+    if not settings:
+        settings = SiteSettings(
+            store_name="AllNeeds"
+        )
+        db.add(settings)
+
+    update_data = data.model_dump(
+        exclude_unset=True
+    )
+
+    for field, value in update_data.items():
+        setattr(settings, field, value)
+
+    await db.commit()
+    await db.refresh(settings)
+
+    return settings
 
 @api_router.get("/")
 async def root():

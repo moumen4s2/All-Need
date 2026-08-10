@@ -385,3 +385,124 @@ class Payment(Base):
         String,
         nullable=True
     )
+
+class SiteSettings(Base):
+    __tablename__ = "site_settings"
+
+    id = Column(
+        Integer,
+        primary_key=True
+    )
+
+
+    store_name = Column(
+        String,
+        nullable=False,
+        default="AllNeeds"
+    )
+
+    logo = Column(
+        String,
+        nullable=True
+    )
+
+    description = Column(
+        Text,
+        nullable=True
+    )
+
+    description_ar = Column(
+        Text,
+        nullable=True
+    )
+
+
+    instagram_url = Column(
+        String,
+        nullable=True
+    )
+
+    facebook_url = Column(
+        String,
+        nullable=True
+    )
+
+    twitter_url = Column(
+        String,
+        nullable=True
+    )
+
+
+    address = Column(
+        String,
+        nullable=True
+    )
+
+    address_ar = Column(
+        String,
+        nullable=True
+    )
+
+    phone = Column(
+        String,
+        nullable=True
+    )
+
+    email = Column(
+        String,
+        nullable=True
+    )
+
+    about_url = Column(
+        String,
+        nullable=True
+    )
+
+    faq_url = Column(
+        String,
+        nullable=True
+    )
+
+    privacy_url = Column(
+        String,
+        nullable=True
+    )
+
+    return_policy_url = Column(
+        String,
+        nullable=True
+    )
+
+    terms_url = Column(
+        String,
+        nullable=True
+    )
+
+    show_visa = Column(
+        Boolean,
+        default=True,
+        nullable=False
+    )
+
+    show_mastercard = Column(
+        Boolean,
+        default=True,
+        nullable=False
+    )
+
+    show_apple_pay = Column(
+        Boolean,
+        default=True,
+        nullable=False
+    )
+
+    show_google_pay = Column(
+        Boolean,
+        default=True,
+        nullable=False
+    )
+
+    copyright_text = Column(
+        String,
+        nullable=True
+    )
