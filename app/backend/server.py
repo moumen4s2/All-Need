@@ -1068,6 +1068,10 @@ async def admin_dashboard(
         select(func.count()).select_from(Product)
     )
 
+    categories = await db.scalar(
+        select(func.count()).select_from(Category)
+    )
+
     orders = await db.scalar(
         select(func.count()).select_from(Order)
     )
@@ -1091,7 +1095,7 @@ async def admin_dashboard(
     return {
         "products": products or 0,
         "orders": orders or 0,
-        "categories": 6,
+        "categories": categories or 0,
         "newsletter": newsletter or 0,
         "messages": messages or 0,
         "latest_orders": latest_orders
