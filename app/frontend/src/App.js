@@ -39,6 +39,7 @@ import Categories from "./admin/Categories";
 import Settings from "./admin/Settings";
 import Login from "./admin/Login";
 import AdminRoute from "./admin/AdminRoute";
+import Coupons from "./admin/Coupons";
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -158,6 +159,11 @@ function AppRouter() {
           <Route
             path="orders/:orderId"
             element={<OrderDetails />}
+          />
+          
+          <Route
+            path="coupons"
+            element={<Coupons />}
           />
 
           <Route
