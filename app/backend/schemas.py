@@ -176,6 +176,7 @@ class CouponResponse(BaseModel):
 
 class CouponCheck(BaseModel):
     code: str
+    cart_subtotal: float
 
 
 class OrderItemCreate(BaseModel):

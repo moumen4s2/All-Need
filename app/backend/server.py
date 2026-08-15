@@ -612,6 +612,12 @@ async def validate_coupon(
 ):
     code = data.code.strip().upper()
 
+    if data.cart_subtotal < 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid cart subtotal"
+        )
+
     result = await db.execute(
         select(Coupon).where(
             Coupon.code == code
@@ -641,11 +647,62 @@ async def validate_coupon(
             detail="This coupon has reached its usage limit"
         )
 
+    # Minimum order amount
+    if (
+        coupon.min_order_amount is not None
+        and data.cart_subtotal < float(coupon.min_order_amount)
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Minimum order amount for this coupon is "
+                f"AED {float(coupon.min_order_amount):.2f}"
+            )
+        )
+
+    # Calculate preview discount
+    if coupon.discount_type == "percent":
+
+        discount = data.cart_subtotal * (
+            float(coupon.value) / 100
+        )
+
+    elif coupon.discount_type == "fixed":
+
+        discount = float(coupon.value)
+
+    else:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid coupon discount type"
+        )
+
+    # Maximum discount
+    if coupon.max_discount is not None:
+
+        discount = min(
+            discount,
+            float(coupon.max_discount)
+        )
+
+    # Discount cannot exceed cart subtotal
+    discount = min(
+        discount,
+        data.cart_subtotal
+    )
+
+    discount = round(
+        max(discount, 0.0),
+        2
+    )
+
     return {
         "valid": True,
         "code": coupon.code,
         "discount_type": coupon.discount_type,
         "value": float(coupon.value),
+        "discount": discount,
         "description": coupon.description,
         "min_order_amount": (
             float(coupon.min_order_amount)
