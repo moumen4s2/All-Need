@@ -72,8 +72,13 @@ class Admin(Base):
     )
 
     password = Column(String)
-
     name = Column(String)
+
+    role = Column(
+        String,
+        default="admin",
+        nullable=False
+    )
 
 
 class AdminSession(Base):

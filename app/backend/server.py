@@ -251,8 +251,6 @@ async def get_current_admin(
             detail="Unauthorized"
         )
 
-    print("COOKIE TOKEN:", token)
-
     result = await db.execute(
         select(AdminSession).where(
             AdminSession.session_token == token
@@ -260,8 +258,6 @@ async def get_current_admin(
     )
 
     session = result.scalar_one_or_none()
-
-    print("SESSION FOUND:", session)
 
     if not session:
         raise HTTPException(
@@ -285,12 +281,38 @@ async def get_current_admin(
 
     return admin
 
+def require_admin(
+    admin: Admin = Depends(get_current_admin)
+):
+    if admin.role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Admin access required"
+        )
+
+    return admin
+
+
+def require_admin_or_sales(
+    admin: Admin = Depends(get_current_admin)
+):
+    if admin.role not in ["admin", "sales"]:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied"
+        )
+
+    return admin
+
 @api_router.get("/admin/me")
 async def admin_me(
     admin: Admin = Depends(get_current_admin)
 ):
     return {
-        "name": admin.name
+        "id": admin.id,
+        "name": admin.name,
+        "email": admin.email,
+        "role": admin.role
     }
 
 @api_router.post("/admin/logout")
