@@ -1572,7 +1572,7 @@ async def update_order_status(
 
 @api_router.get(
     "/admin/coupons",
-    response_model=List[CouponResponse]
+    response_model=list[CouponResponse]
 )
 async def admin_get_coupons(
     admin: Admin = Depends(get_current_admin),
