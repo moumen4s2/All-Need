@@ -279,3 +279,24 @@ class SiteSettingsResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class StaffCreate(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+
+
+class StaffUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    password: Optional[str] = None
+
+
+class StaffResponse(BaseModel):
+    id: int
+    name: Optional[str] = None
+    email: EmailStr
+    role: str
+
+    class Config:
+        from_attributes = True

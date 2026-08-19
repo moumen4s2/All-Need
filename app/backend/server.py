@@ -12,7 +12,6 @@ import stripe
 
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
-from schemas import now_utc
 from passlib.context import CryptContext
 from typing import Optional,List
 
@@ -57,7 +56,11 @@ from schemas import (
     OrderCreate,
     PaymentCreate,
     SiteSettingsResponse,
-    SiteSettingsUpdate
+    SiteSettingsUpdate,
+    StaffCreate,
+    StaffResponse,
+    StaffUpdate,
+    now_utc
 )
 
 pwd = CryptContext(
@@ -1572,7 +1575,7 @@ async def update_order_status(
 
 @api_router.get(
     "/admin/coupons",
-    response_model=list[CouponResponse]
+    response_model=List[CouponResponse]
 )
 async def admin_get_coupons(
     admin: Admin = Depends(get_current_admin),
@@ -1751,6 +1754,143 @@ async def admin_delete_coupon(
     return {
         "success": True,
         "message": "Coupon deleted successfully"
+    }
+
+@api_router.get(
+    "/admin/staff",
+    response_model=list[StaffResponse]
+)
+async def get_staff(
+    admin: Admin = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(Admin)
+        .where(Admin.role == "sales")
+        .order_by(Admin.id)
+    )
+
+    return result.scalars().all()
+
+@api_router.post(
+    "/admin/staff",
+    response_model=StaffResponse
+)
+async def create_staff(
+    data: StaffCreate,
+    admin: Admin = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(Admin).where(
+            Admin.email == data.email
+        )
+    )
+
+    existing = result.scalar_one_or_none()
+
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail="An account with this email already exists"
+        )
+
+    staff = Admin(
+        name=data.name,
+        email=data.email,
+        password=pwd.hash(data.password),
+        role="sales"
+    )
+
+    db.add(staff)
+
+    await db.commit()
+    await db.refresh(staff)
+
+    return staff
+
+@api_router.put(
+    "/admin/staff/{staff_id}",
+    response_model=StaffResponse
+)
+async def update_staff(
+    staff_id: int,
+    data: StaffUpdate,
+    admin: Admin = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(Admin).where(
+            Admin.id == staff_id,
+            Admin.role == "sales"
+        )
+    )
+
+    staff = result.scalar_one_or_none()
+
+    if not staff:
+        raise HTTPException(
+            status_code=404,
+            detail="Sales account not found"
+        )
+
+    if data.email is not None:
+
+        result = await db.execute(
+            select(Admin).where(
+                Admin.email == data.email,
+                Admin.id != staff_id
+            )
+        )
+
+        existing = result.scalar_one_or_none()
+
+        if existing:
+            raise HTTPException(
+                status_code=400,
+                detail="An account with this email already exists"
+            )
+
+        staff.email = data.email
+
+    if data.name is not None:
+        staff.name = data.name
+
+    if data.password is not None:
+        staff.password = pwd.hash(data.password)
+
+    await db.commit()
+    await db.refresh(staff)
+
+    return staff
+
+@api_router.delete("/admin/staff/{staff_id}")
+async def delete_staff(
+    staff_id: int,
+    admin: Admin = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(Admin).where(
+            Admin.id == staff_id,
+            Admin.role == "sales"
+        )
+    )
+
+    staff = result.scalar_one_or_none()
+
+    if not staff:
+        raise HTTPException(
+            status_code=404,
+            detail="Sales account not found"
+        )
+
+    await db.delete(staff)
+    await db.commit()
+
+    return {
+        "ok": True,
+        "message": "Sales account deleted successfully"
     }
 
 # Site Settings
