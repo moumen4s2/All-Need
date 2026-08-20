@@ -17,6 +17,7 @@ from typing import Optional,List
 
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel, EmailStr
 
 from database import Base, engine, get_db
 
@@ -60,6 +61,7 @@ from schemas import (
     StaffCreate,
     StaffResponse,
     StaffUpdate,
+    AdminProfileUpdate,
     now_utc
 )
 
@@ -1893,6 +1895,67 @@ async def delete_staff(
         "message": "Sales account deleted successfully"
     }
 
+@api_router.put("/admin/profile")
+async def update_admin_profile(
+    data: AdminProfileUpdate,
+    admin: Admin = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    # الاسم مسموح للـ Admin والـ Sales
+    if data.name is not None:
+        name = data.name.strip()
+
+        if not name:
+            raise HTTPException(
+                status_code=400,
+                detail="Name cannot be empty"
+            )
+
+        admin.name = name
+
+    # الإيميل والباسورد مسموحين للـ Admin فقط
+    if admin.role == "admin":
+
+        if data.email is not None:
+            email = str(data.email).strip().lower()
+
+            result = await db.execute(
+                select(Admin).where(
+                    Admin.email == email,
+                    Admin.id != admin.id
+                )
+            )
+
+            existing_admin = result.scalar_one_or_none()
+
+            if existing_admin:
+                raise HTTPException(
+                    status_code=400,
+                    detail="An account with this email already exists"
+                )
+
+            admin.email = email
+
+        if data.password is not None:
+            password = data.password.strip()
+
+            if len(password) < 6:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Password must be at least 6 characters"
+                )
+
+            admin.password = pwd.hash(password)
+
+    await db.commit()
+    await db.refresh(admin)
+
+    return {
+        "id": admin.id,
+        "name": admin.name,
+        "email": admin.email,
+        "role": admin.role
+    }
 # Site Settings
 
 @api_router.get(

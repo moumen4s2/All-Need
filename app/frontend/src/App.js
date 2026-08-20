@@ -40,6 +40,8 @@ import Settings from "./admin/Settings";
 import Login from "./admin/Login";
 import AdminRoute from "./admin/AdminRoute";
 import Coupons from "./admin/Coupons";
+import Staff from "./admin/Staff";
+import Profile from "./admin/Profile";
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -73,7 +75,9 @@ function AppRouter() {
 
       <Routes>
 
-        {/* Website */}
+        {/* =========================
+            Website
+        ========================= */}
 
         <Route
           path="/*"
@@ -82,26 +86,76 @@ function AppRouter() {
 
               <Routes>
 
-                <Route path="/" element={<Home />} />
-                <Route path="/shop" element={<Shop />} />
-                <Route path="/categories" element={<ShopCategories />} />
-                <Route path="/product/:id" element={<ProductDetails />} />
-                <Route path="/wishlist" element={<Wishlist />} />
-                <Route path="/checkout" element={<Checkout />} />
-                <Route path="/track" element={<TrackOrder />} />
-                <Route path="/account" element={<Account />} />
-                <Route path="/auth/callback" element={<AuthCallback />} />
-                <Route path="/contact" element={<Contact />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/faq" element={<FAQ />} />
+                <Route
+                  path="/"
+                  element={<Home />}
+                />
+
+                <Route
+                  path="/shop"
+                  element={<Shop />}
+                />
+
+                <Route
+                  path="/categories"
+                  element={<ShopCategories />}
+                />
+
+                <Route
+                  path="/product/:id"
+                  element={<ProductDetails />}
+                />
+
+                <Route
+                  path="/wishlist"
+                  element={<Wishlist />}
+                />
+
+                <Route
+                  path="/checkout"
+                  element={<Checkout />}
+                />
+
+                <Route
+                  path="/track"
+                  element={<TrackOrder />}
+                />
+
+                <Route
+                  path="/account"
+                  element={<Account />}
+                />
+
+                <Route
+                  path="/auth/callback"
+                  element={<AuthCallback />}
+                />
+
+                <Route
+                  path="/contact"
+                  element={<Contact />}
+                />
+
+                <Route
+                  path="/about"
+                  element={<About />}
+                />
+
+                <Route
+                  path="/faq"
+                  element={<FAQ />}
+                />
+
                 <Route
                   path="/privacy"
                   element={<Policy type="privacy" />}
                 />
+
                 <Route
                   path="/returns"
                   element={<Policy type="returns" />}
                 />
+
                 <Route
                   path="/terms"
                   element={<Policy type="terms" />}
@@ -113,14 +167,18 @@ function AppRouter() {
           }
         />
 
-        {/* Admin Login */}
+        {/* =========================
+            Admin Login
+        ========================= */}
 
         <Route
           path="/admin/login"
           element={<Login />}
         />
 
-        {/* Protected Admin */}
+        {/* =========================
+            Protected Admin Area
+        ========================= */}
 
         <Route
           path="/admin"
@@ -131,10 +189,18 @@ function AppRouter() {
           }
         >
 
+          {/* Dashboard
+              Admin + Sales
+          */}
+
           <Route
             index
             element={<Dashboard />}
           />
+
+          {/* Products
+              Admin + Sales
+          */}
 
           <Route
             path="products"
@@ -151,6 +217,19 @@ function AppRouter() {
             element={<ProductForm />}
           />
 
+          {/* Categories
+              Admin + Sales
+          */}
+
+          <Route
+            path="categories"
+            element={<Categories />}
+          />
+
+          {/* Orders
+              Admin + Sales
+          */}
+
           <Route
             path="orders"
             element={<Orders />}
@@ -160,20 +239,45 @@ function AppRouter() {
             path="orders/:orderId"
             element={<OrderDetails />}
           />
-          
+
+          {/* =========================
+              Admin Only
+          ========================= */}
+
           <Route
             path="coupons"
-            element={<Coupons />}
+            element={
+              <AdminRoute adminOnly>
+                <Coupons />
+              </AdminRoute>
+            }
           />
 
           <Route
-            path="categories"
-            element={<Categories />}
+            path="staff"
+            element={
+              <AdminRoute adminOnly>
+                <Staff />
+              </AdminRoute>
+            }
           />
 
           <Route
             path="settings"
-            element={<Settings />}
+            element={
+              <AdminRoute adminOnly>
+                <Settings />
+              </AdminRoute>
+            }
+          />
+
+          {/* =========================
+              Admin + Sales
+          ========================= */}
+
+          <Route
+            path="profile"
+            element={<Profile />}
           />
 
         </Route>

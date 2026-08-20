@@ -2,51 +2,56 @@ import { Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 
-export default function AdminRoute({ children }) {
-
+export default function AdminRoute({
+    children,
+    adminOnly = false
+}) {
     const [loading, setLoading] = useState(true);
-    const [authenticated, setAuthenticated] = useState(false);
+    const [admin, setAdmin] = useState(null);
 
     useEffect(() => {
-
         checkAuth();
-
     }, []);
 
     async function checkAuth() {
-
         try {
-
-            await api.get("/admin/me");
-
-            setAuthenticated(true);
-
+            const res = await api.get("/admin/me");
+            setAdmin(res.data);
         } catch {
-
-            setAuthenticated(false);
-
+            setAdmin(null);
+        } finally {
+            setLoading(false);
         }
-
-        setLoading(false);
-
     }
 
     if (loading) {
-
         return (
             <div className="flex items-center justify-center min-h-screen text-xl">
                 Loading...
             </div>
         );
-
     }
 
-    if (!authenticated) {
+    if (!admin) {
+        return (
+            <Navigate
+                to="/admin/login"
+                replace
+            />
+        );
+    }
 
-        return <Navigate to="/admin/login" replace />;
-
+    if (
+        adminOnly &&
+        admin.role !== "admin"
+    ) {
+        return (
+            <Navigate
+                to="/admin"
+                replace
+            />
+        );
     }
 
     return children;
-
 }

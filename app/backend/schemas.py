@@ -300,3 +300,8 @@ class StaffResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class AdminProfileUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    password: Optional[str] = None
