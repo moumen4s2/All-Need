@@ -83,6 +83,13 @@ export default function AdminLayout() {
                     </NavLink>
 
                     <NavLink
+                        to="/admin/profile"
+                        className="px-4 py-3 rounded-lg hover:bg-slate-700"
+                    >
+                        My Profile
+                    </NavLink>
+
+                    <NavLink
                         to="/admin/products"
                         className={({ isActive }) =>
                             `px-4 py-3 rounded-lg transition-colors ${
