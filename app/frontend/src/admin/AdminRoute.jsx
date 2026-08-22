@@ -4,7 +4,7 @@ import { api } from "../lib/api";
 
 export default function AdminRoute({
     children,
-    adminOnly = false
+    adminOnly = false,
 }) {
     const [loading, setLoading] = useState(true);
     const [admin, setAdmin] = useState(null);
@@ -16,14 +16,18 @@ export default function AdminRoute({
     async function checkAuth() {
         try {
             const res = await api.get("/admin/me");
+
             setAdmin(res.data);
-        } catch {
+        } catch (error) {
+            console.error("Admin authentication failed:", error);
+
             setAdmin(null);
         } finally {
             setLoading(false);
         }
     }
 
+    // Check authentication
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen text-xl">
@@ -32,6 +36,7 @@ export default function AdminRoute({
         );
     }
 
+    // Not logged in
     if (!admin) {
         return (
             <Navigate
@@ -41,6 +46,7 @@ export default function AdminRoute({
         );
     }
 
+    // Admin-only pages
     if (
         adminOnly &&
         admin.role !== "admin"

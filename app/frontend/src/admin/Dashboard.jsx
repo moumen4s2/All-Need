@@ -60,9 +60,26 @@ export default function Dashboard() {
 
         <div>
 
-            <h1 className="text-4xl font-bold mb-8">
-                Dashboard
-            </h1>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+
+                <div>
+                    <h1 className="text-4xl font-bold">
+                        Dashboard
+                    </h1>
+
+                    <p className="text-gray-500 mt-2">
+                        Welcome to AllNeeds Admin Dashboard
+                    </p>
+                </div>
+
+                <Link
+                    to="/admin/profile"
+                    className="bg-slate-900 text-white px-5 py-3 rounded-lg font-semibold hover:bg-slate-800 transition-colors"
+                >
+                    My Profile
+                </Link>
+
+            </div>
 
             <div className="grid md:grid-cols-5 gap-6 mb-10">
 

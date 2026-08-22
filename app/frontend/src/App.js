@@ -188,10 +188,7 @@ function AppRouter() {
             </AdminRoute>
           }
         >
-          <Route
-            path="profile"
-            element={<Profile />}
-          />
+          
 
           {/* Dashboard
               Admin + Sales
